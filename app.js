@@ -182,6 +182,9 @@ function addInvRow() {
     </td>
     <td class="gst-col"><input type="text" placeholder="0.00" readonly style="background:#f9fafb;width:80px;font-family:'DM Mono',monospace;font-size:12px;" id="inv-gstamt-${n}" aria-label="GST Amount (computed)"></td>
     <td><input type="text" placeholder="0.00" readonly style="background:#f9fafb;width:90px;font-family:'DM Mono',monospace;font-size:12px;" id="inv-amt-${n}" aria-label="Total Amount (computed)"></td>
+    <td><input type="text" placeholder="Batch No." style="width:100px" aria-label="Batch Number"></td>
+    <td><input type="text" placeholder="dd/mm/yy" style="width:80px" aria-label="Mfg Date"></td>
+    <td><input type="text" placeholder="dd/mm/yy" style="width:80px" aria-label="Expiry Date"></td>
     <td><button class="del-row" onclick="delRow('inv-row-${n}','inv')" title="Delete row" aria-label="Delete row ${n}">✕</button></td>
   `;
   tbody.appendChild(tr);
@@ -364,53 +367,324 @@ function esc(str) {
     .replace(/'/g, '&#39;');
 }
 
+// ══════════════════════════════════════════════
+//  HTML HELPERS  (Quotation layout – Image 1)
+// ══════════════════════════════════════════════
+
+/** Sanitise a string to prevent XSS when injecting user values as innerHTML. */
+function esc2(str) { return esc(str); } // alias kept for compat
+
 /**
- * Builds the company header for a document.
- * @param {string} docType  - e.g. 'TAX INVOICE'
- * @param {string} [copyLabel] - optional copy-type label shown in top-right corner
- *                               e.g. 'Original for Recipient'
+ * Quotation document – matches client reference (Image 1).
+ * Bordered table, logo+name top-left, QUOTATION underlined heading, To: block.
  */
-function companyHeaderHTML(docType, copyLabel = '') {
-  const copyBadgeHTML = copyLabel
-    ? `<div class="copy-label-badge">${esc(copyLabel)}</div>`
-    : '';
+function buildQuotationDocHTML(data) {
+  const { quoDate, clientName, clientAddr, contact, clientPhone,
+          itemRows, grand, quoGst } = data;
+
+  // Pad to minimum 5 visible rows
+  const MIN_ROWS = 5;
+  let rows = itemRows.slice();
+  while (rows.length < MIN_ROWS) rows.push(null); // null = empty row
+
+  const rowsHTML = rows.map((r, i) => {
+    if (!r) return `<tr class="qt-row empty">
+      <td>${i + 1}</td><td></td><td></td><td></td>
+      <td></td><td></td><td></td>
+    </tr>`;
+    const gstCol   = quoGst ? `<td>${r.gstPct}%</td><td class="num">${r.gstAmt > 0 ? r.gstAmt.toFixed(2) : ''}</td>` : '<td></td><td></td>';
+    return `<tr class="qt-row">
+      <td>${i + 1}</td>
+      <td class="left bold">${esc(r.name)}</td>
+      <td>${esc(r.code)}</td>
+      <td class="num">${r.price > 0 ? r.price.toFixed(2) : ''}</td>
+      ${gstCol}
+      <td class="num">${r.total > 0 ? r.total.toFixed(2) : ''}</td>
+    </tr>`;
+  }).join('');
+
+  const totalGst = itemRows.reduce((s, r) => s + (r.gstAmt || 0), 0);
+
+  let addrBlock = '';
+  if (clientName) addrBlock += `<div class="qt-client-name">${esc(clientName)}</div>`;
+  let addrLines = '';
+  if (contact)     addrLines += esc(contact) + '<br>';
+  if (clientAddr)  addrLines += esc(clientAddr).replace(/\n/g, '<br>');
+  if (clientPhone) addrLines += '<br>Ph: ' + esc(clientPhone);
+  if (addrLines)   addrBlock += `<div class="qt-client-addr">${addrLines}</div>`;
+
+  // Format date dd/mm/yyyy
+  function fmtDMY(str) {
+    if (!str) return '';
+    const [y,m,d] = str.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
   return `
-  <div class="doc-header">
-    <div class="doc-logo-area">
-      <div class="doc-logo-circle">SST</div>
+<div class="qt-doc">
+  <!-- Header -->
+  <div class="qt-header">
+    <div class="qt-logo-block">
+      <div class="qt-logo-circle">SST</div>
       <div>
-        <div class="doc-company-name">SST Super Sun Traders</div>
-        <div class="doc-company-info">
-          #29/23, 8th Street, Dr.Subbaraya Nagar, Kodambakkam, Chennai – 600 024<br>
-          GST: 33BKGPV4919L1ZM &nbsp;|&nbsp; Ph: 044 4218 8202 / 4208 2575<br>
-          supersuntraders@gmail.com
-        </div>
+        <div class="qt-company-name">SUPER SUN TRADERS</div>
+        <div class="qt-company-info">#29/23, 8th Street, Dr.Subbaraya Nagar, Chennai - 600 024<br>
+        GST: 33BKGPV4919L1ZM &nbsp;|&nbsp; Ph: 044 4218 8202 / 4208 2575 &nbsp;|&nbsp; supersuntraders@gmail.com</div>
       </div>
     </div>
-    <div class="doc-title-area">
-      <div class="doc-type-badge">${esc(docType)}</div>
-      ${copyBadgeHTML}
-    </div>
-  </div>`;
-}
+    <div class="qt-header-divider"></div>
+  </div>
 
-function docFooterHTML() {
-  return `
-  <div class="doc-footer">
-    <div>
-      <div style="font-size:11px;color:var(--gray-500);">Subject to Chennai Jurisdiction Only</div>
-    </div>
-    <div class="doc-sign">
-      <div class="doc-sign-line"></div>
-      <div class="doc-sign-name">SST SUPER SUN TRADERS</div>
-      <div class="doc-sign-title">Authorised Signatory</div>
+  <!-- Title & Date -->
+  <div class="qt-title-row">
+    <div class="qt-title-text">QUOTATION</div>
+    <div class="qt-date-text">Date : ${quoDate}</div>
+  </div>
+
+  <!-- To block -->
+  <div class="qt-to-block">
+    <span class="qt-to-label">To:</span>
+    ${addrBlock}
+  </div>
+
+  <!-- Items Table -->
+  <table class="qt-table">
+    <thead>
+      <tr>
+        <th>S.NO</th>
+        <th>ITEM NO</th>
+        <th>PRODUCT CODE</th>
+        <th class="num">UNIT PRICE</th>
+        <th>GST</th>
+        <th>GST AMT</th>
+        <th class="num">AMOUNT</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHTML}</tbody>
+    <tfoot>
+      <tr class="qt-total-row">
+        <td colspan="6" class="right bold">TOTAL</td>
+        <td class="num bold">${grand.toFixed(2)}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- Footer -->
+  <div class="qt-footer">
+    <div class="qt-sign-block">
+      <div class="qt-sign-label">Authorised Signatory</div>
+      <div class="qt-sign-name">SUPER SUN TRADERS</div>
     </div>
   </div>
-  <div class="doc-bottom-bar">
-    SST SUPER SUN TRADERS | #29/23, 8th Street, Dr.Subbaraya Nagar, Kodambakkam, Chennai – 600 024<br>
-    GST: 33BKGPV4919L1ZM | Ph: 044 4218 8202 / 4208 2575 | supersuntraders@gmail.com
-  </div>`;
+
+  <!-- Bottom bar -->
+  <div class="qt-bottom-bar">
+    <strong>SUPER SUN TRADERS</strong><br>
+    #29/23, 8th Street, Dr.Subbaraya Nagar, Kodambakkam, Chennai - 600 024<br>
+    Ph: 044 4218 8202 / 4208 2575 &nbsp;|&nbsp; GST: 33BKGPV4919L1ZM<br>
+    supersuntraders@gmail.com
+  </div>
+</div>`;
 }
+
+// ══════════════════════════════════════════════
+//  Invoice header helper – still used for copy-badge
+// ══════════════════════════════════════════════
+function esc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Invoice document – matches client reference (Image 2).
+ * Centered "Tax Invoice" title, 2-col header info grid, Batch/Mfg Dt/Expiry
+ * sub-rows, GST tax breakdown rows, Amount in Words + "For SST SUPER SUN TRADERS".
+ */
+function buildInvoiceDocHTML(data, copyLabel) {
+  const { invNo, invDate, delivNote, modePayment, refNo, refDate,
+          buyerOrderNo, buyerOrderDate, dispatchDocNo, delivNoteDate,
+          dispatchedThrough, destination, cityPortLoading, cityPortDischarge,
+          buyerName, buyerGst, buyerAddr, buyerPhone, buyerEmail,
+          termsDelivery, itemRows, sub, cgst, sgst, grand, gstEnabled } = data;
+
+  // Format date dd/mm/yyyy from YYYY-MM-DD
+  function fmtDMY(str) {
+    if (!str) return '';
+    const [y,m,d] = str.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  const copyBadgeHTML = copyLabel
+    ? `<div class="inv-copy-badge">${esc(copyLabel)}</div>` : '';
+
+  // Build buyer address
+  let buyerBlock = '';
+  if (buyerName)  buyerBlock += `<div class="inv-buyer-name">${esc(buyerName)}</div>`;
+  if (buyerAddr)  buyerBlock += `<div>${esc(buyerAddr).replace(/\n/g,'<br>')}</div>`;
+  if (buyerPhone) buyerBlock += `<div>Ph: ${esc(buyerPhone)}</div>`;
+  if (buyerEmail) buyerBlock += `<div>${esc(buyerEmail)}</div>`;
+  if (buyerGst)   buyerBlock += `<div>GSTIN: ${esc(buyerGst)}</div>`;
+
+  // Build items rows — MIN 4 rows
+  const MIN_ROWS = 4;
+  let rows = itemRows.slice();
+  while (rows.length < MIN_ROWS) rows.push(null);
+
+  const itemRowsHTML = rows.map((r, i) => {
+    if (!r) return `<tr class="inv-item-row">
+      <td rowspan="2" class="inv-sno">${i+1}</td>
+      <td class="inv-desc-cell"></td>
+      <td></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td>
+    </tr>
+    <tr class="inv-sub-row"><td class="inv-sub-info"></td><td colspan="5"></td></tr>`;
+    const gstCols = gstEnabled
+      ? `<td class="num">${r.rate > 0 ? r.rate.toFixed(2) : ''}</td><td class="num"></td><td class="num">${r.total > 0 ? r.total.toFixed(2) : ''}</td>`
+      : `<td class="num">${r.rate > 0 ? r.rate.toFixed(2) : ''}</td><td class="num"></td><td class="num">${r.total > 0 ? r.total.toFixed(2) : ''}</td>`;
+    return `<tr class="inv-item-row">
+      <td rowspan="2" class="inv-sno">${i+1}</td>
+      <td class="inv-desc-cell">${esc(r.desc)}</td>
+      <td>${esc(r.hsn)}</td>
+      <td class="num">${r.qty > 0 ? r.qty : ''}</td>
+      <td class="num">${r.rate > 0 ? r.rate.toFixed(2) : ''}</td>
+      <td class="num"></td>
+      <td class="num">${r.total > 0 ? r.total.toFixed(2) : ''}</td>
+    </tr>
+    <tr class="inv-sub-row">
+      <td class="inv-sub-info">Batch&nbsp;${esc(r.batch||'')} &nbsp; Mfg Dt&nbsp;${esc(r.mfgDt||'')} &nbsp; Expiry&nbsp;${esc(r.expiry||'')}</td>
+      <td colspan="5"></td>
+    </tr>`;
+  }).join('');
+
+  // GST breakdown rows
+  let taxRowsHTML = '';
+  if (gstEnabled) {
+    // Group items by GST rate and compute separate CGST/SGST per rate
+    const rateMap = {};
+    itemRows.forEach(r => {
+      if (!r) return;
+      const key = r.gstPct.toFixed(1);
+      if (!rateMap[key]) rateMap[key] = 0;
+      rateMap[key] += r.base;
+    });
+    Object.entries(rateMap).sort(([a],[b])=>parseFloat(a)-parseFloat(b)).forEach(([pct, base]) => {
+      const half = base * parseFloat(pct) / 100 / 2;
+      if (half > 0) {
+        const halfPct = (parseFloat(pct)/2).toFixed(1);
+        taxRowsHTML += `
+        <tr class="inv-tax-row">
+          <td colspan="5" class="right bold italic">OUTPUT CGST @ ${halfPct}%</td>
+          <td class="num bold italic">${halfPct}&nbsp;%</td>
+          <td class="num">${half.toFixed(2)}</td>
+        </tr>
+        <tr class="inv-tax-row">
+          <td colspan="5" class="right bold italic">OUTPUT SGST @ ${halfPct}%</td>
+          <td class="num bold italic">${halfPct}&nbsp;%</td>
+          <td class="num">${half.toFixed(2)}</td>
+        </tr>`;
+      }
+    });
+  }
+
+  return `
+<div class="inv-doc">
+  <!-- Title -->
+  <div class="inv-title-row">
+    <div class="inv-title">Tax Invoice${copyLabel ? '' : ''}</div>
+    ${copyBadgeHTML}
+  </div>
+
+  <!-- Top info block -->
+  <div class="inv-top-grid">
+    <!-- Left: Company info -->
+    <div class="inv-company-block">
+      <div class="inv-co-name">SST SUPER SUN TRADERS</div>
+      <div class="inv-co-info">
+        #29/23, 8th Street, Dr.Subbaraya Nagar,<br>
+        Kodambakkam, Chennai - 600 024<br>
+        GSTIN/UIN: 33BKGPV4919L1ZM<br>
+        State Name : Tamil Nadu, Code : 33<br>
+        Ph: 044 4218 8202 / 4208 2575<br>
+        E-Mail : supersuntraders@gmail.com
+      </div>
+    </div>
+    <!-- Right: Invoice fields grid -->
+    <div class="inv-fields-grid">
+      <div class="inv-field-label">Invoice No.</div>      <div class="inv-field-label">Dated</div>
+      <div class="inv-field-val">${esc(invNo)}</div>       <div class="inv-field-val">${invDate}</div>
+
+      <div class="inv-field-label">Delivery Note</div>   <div class="inv-field-label">Mode/Terms of Payment</div>
+      <div class="inv-field-val">${esc(delivNote)}<br><span class="inv-deliv-cum">DELIVERY CUM INVOICE</span></div>
+      <div class="inv-field-val">${esc(modePayment)}</div>
+
+      <div class="inv-field-label">Reference No. &amp; Date.</div> <div class="inv-field-label">Other References</div>
+      <div class="inv-field-val">${esc(refNo)}${refDate?' – '+esc(refDate):''}</div> <div class="inv-field-val"></div>
+
+      <div class="inv-field-label">Buyer's Order No.</div> <div class="inv-field-label">Dated</div>
+      <div class="inv-field-val">${esc(buyerOrderNo)}</div>  <div class="inv-field-val">${esc(buyerOrderDate)}</div>
+
+      <div class="inv-field-label">Dispatch Doc No.</div>  <div class="inv-field-label">Delivery Note Date</div>
+      <div class="inv-field-val">${esc(dispatchDocNo)}</div> <div class="inv-field-val">${esc(delivNoteDate)}</div>
+
+      <div class="inv-field-label">Dispatched through</div> <div class="inv-field-label">Destination</div>
+      <div class="inv-field-val">${esc(dispatchedThrough)}</div> <div class="inv-field-val">${esc(destination)}</div>
+
+      <div class="inv-field-label">City/Port of Loading</div> <div class="inv-field-label">City/Port of Discharge</div>
+      <div class="inv-field-val">${esc(cityPortLoading)}</div>  <div class="inv-field-val">${esc(cityPortDischarge)}</div>
+    </div>
+  </div>
+
+  <!-- Buyer block -->
+  <div class="inv-buyer-block">
+    <div class="inv-buyer-header">Buyer (Bill to)</div>
+    <div class="inv-buyer-details">${buyerBlock}</div>
+    <div class="inv-buyer-meta">
+      <div>State Name &nbsp;: Tamil Nadu, Code : 33</div>
+      <div>Terms of Delivery<br><strong>${esc(termsDelivery) || 'THROUGH OWN STAFF'}</strong></div>
+    </div>
+  </div>
+
+  <!-- Items Table -->
+  <table class="inv-table">
+    <thead>
+      <tr>
+        <th class="inv-th-sno">SI<br>No.</th>
+        <th class="inv-th-desc">Description of Goods</th>
+        <th>HSN/SAC</th>
+        <th class="num">Quantity</th>
+        <th class="num">Rate</th>
+        <th class="num">per</th>
+        <th class="num">Amount</th>
+      </tr>
+    </thead>
+    <tbody>${itemRowsHTML}</tbody>
+    <tfoot>
+      ${taxRowsHTML}
+      <tr class="inv-grand-row">
+        <td colspan="6" class="right bold">Grand Total</td>
+        <td class="num bold">${grand.toFixed(2)}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- Amount in words + signatory -->
+  <div class="inv-bottom-row">
+    <div class="inv-words-block">
+      <span class="inv-words-label">Amount in Words:</span><br>
+      <em>${amtWords(grand)}</em>
+    </div>
+    <div class="inv-for-block">For SST SUPER SUN TRADERS</div>
+  </div>
+</div>`;
+}
+
+// Legacy stub so old code paths don't break
+function companyHeaderHTML() { return ''; }
+function docFooterHTML()     { return ''; }
 
 // ══════════════════════════════════════════════
 //  PREVIEW INVOICE  (3 copies)
@@ -499,69 +773,58 @@ function buildInvoiceBodyHTML(data) {
       3. Subject to Chennai Jurisdiction Only.
     </div>
 
-    ${docFooterHTML()}
-  </div>`;
-}
-
-
 function previewInvoice() {
   // ── Read form values ────────────────────────
-  const invNo      = document.getElementById('inv-no').value.trim()           || '___';
-  const invDate    = formatDate(document.getElementById('inv-date').value)     || '___';
-  const delivNote  = document.getElementById('inv-delivery-note').value.trim() || '';
-  const dispatch   = document.getElementById('inv-dispatch').value.trim()      || '';
-  const buyerName  = document.getElementById('inv-buyer-name').value.trim()    || '___';
-  const buyerGst   = document.getElementById('inv-buyer-gst').value.trim()     || '';
-  const buyerAddr  = document.getElementById('inv-buyer-addr').value.trim()    || '';
-  const buyerPhone = document.getElementById('inv-buyer-phone').value.trim()   || '';
-  const buyerEmail = document.getElementById('inv-buyer-email').value.trim()   || '';
+  const invNo             = document.getElementById('inv-no').value.trim()             || '';
+  const invDateRaw        = document.getElementById('inv-date').value                  || '';
+  const invDate           = formatDateDMY(invDateRaw);
+  const delivNote         = document.getElementById('inv-delivery-note').value.trim()  || '';
+  const modePayment       = document.getElementById('inv-mode-payment').value.trim()   || '';
+  const refNo             = document.getElementById('inv-ref-no').value.trim()         || '';
+  const refDate           = document.getElementById('inv-ref-date').value              || '';
+  const buyerOrderNo      = document.getElementById('inv-buyer-order-no').value.trim() || '';
+  const buyerOrderDate    = document.getElementById('inv-buyer-order-date').value      || '';
+  const dispatchDocNo     = document.getElementById('inv-dispatch-doc-no').value.trim()|| '';
+  const delivNoteDate     = document.getElementById('inv-deliv-note-date').value       || '';
+  const dispatchedThrough = document.getElementById('inv-dispatched-through').value.trim() || '';
+  const destination       = document.getElementById('inv-destination').value.trim()    || '';
+  const cityPortLoading   = document.getElementById('inv-city-loading').value.trim()   || '';
+  const cityPortDischarge = document.getElementById('inv-city-discharge').value.trim() || '';
+  const buyerName         = document.getElementById('inv-buyer-name').value.trim()     || '';
+  const buyerGst          = document.getElementById('inv-buyer-gst').value.trim()      || '';
+  const buyerAddr         = document.getElementById('inv-buyer-addr').value.trim()     || '';
+  const buyerPhone        = document.getElementById('inv-buyer-phone').value.trim()    || '';
+  const buyerEmail        = document.getElementById('inv-buyer-email').value.trim()    || '';
+  const termsDelivery     = document.getElementById('inv-terms-delivery').value.trim() || '';
 
-  // ── Build items rows ────────────────────────
-  let itemsHTML = '';
+  // ── Build item rows ──────────────────────────
+  const itemRows = [];
   let sub = 0, totalGst = 0;
-  const rows = document.querySelectorAll('#inv-items-body tr');
-  let sno = 0;
 
-  rows.forEach(row => {
+  document.querySelectorAll('#inv-items-body tr').forEach(row => {
     const inputs = row.querySelectorAll('input');
-    // inputs: [0]=desc, [1]=hsn, [2]=qty, [3]=unit, [4]=rate
-    const desc   = inputs[0]?.value.trim();
+    const desc   = inputs[0]?.value.trim() || '';
     const hsn    = inputs[1]?.value.trim() || '';
     const qty    = parseFloat(inputs[2]?.value) || 0;
     const unit   = inputs[3]?.value.trim() || '';
     const rate   = parseFloat(inputs[4]?.value) || 0;
+    const batch  = inputs[5]?.value.trim() || '';
+    const mfgDt  = inputs[6]?.value.trim() || '';
+    const expiry = inputs[7]?.value.trim() || '';
     const sel    = row.querySelector('select');
     const gstPct = sel ? parseFloat(sel.value) : 5;
 
     if (!desc && qty === 0 && rate === 0) return;
 
-    sno++;
     const base   = qty * rate;
-    // Respect GST toggle in preview too
     const gstAmt = invGstEnabled ? parseFloat((base * gstPct / 100).toFixed(2)) : 0;
     const total  = base + gstAmt;
     sub      += base;
     totalGst += gstAmt;
-
-    // Conditionally include GST columns per row
-    const gstCols = invGstEnabled
-      ? `<td>${gstPct}%</td><td class="money">₹${gstAmt.toFixed(2)}</td>`
-      : '';
-
-    itemsHTML += `
-      <tr>
-        <td>${sno}</td>
-        <td>${esc(desc)}</td>
-        <td>${esc(hsn)}</td>
-        <td>${qty}</td>
-        <td>${esc(unit)}</td>
-        <td class="money">₹${rate.toFixed(2)}</td>
-        ${gstCols}
-        <td class="money"><strong>₹${total.toFixed(2)}</strong></td>
-      </tr>`;
+    itemRows.push({ desc, hsn, qty, unit, rate, batch, mfgDt, expiry, gstPct, base, gstAmt, total });
   });
 
-  if (sno === 0) {
+  if (itemRows.length === 0) {
     showToast('Please fill in at least one item row.', 'error');
     return;
   }
@@ -570,11 +833,12 @@ function previewInvoice() {
   const sgst  = totalGst / 2;
   const grand = sub + totalGst;
 
-  // ── Shared data payload (includes gstEnabled flag) ──
   const data = {
-    invNo, invDate, delivNote, dispatch,
+    invNo, invDate, delivNote, modePayment, refNo, refDate,
+    buyerOrderNo, buyerOrderDate, dispatchDocNo, delivNoteDate,
+    dispatchedThrough, destination, cityPortLoading, cityPortDischarge,
     buyerName, buyerGst, buyerAddr, buyerPhone, buyerEmail,
-    itemsHTML, sub, cgst, sgst, grand,
+    termsDelivery, itemRows, sub, cgst, sgst, grand,
     gstEnabled: invGstEnabled,
   };
 
@@ -582,13 +846,7 @@ function previewInvoice() {
   let allCopiesHTML = '';
   INVOICE_COPIES.forEach((copy, idx) => {
     const isLast = idx === INVOICE_COPIES.length - 1;
-    allCopiesHTML += `
-      <div class="print-copy${isLast ? ' print-copy--last' : ''}">
-        <div class="print-doc">
-          ${companyHeaderHTML('TAX INVOICE', copy.label)}
-          ${buildInvoiceBodyHTML(data)}
-        </div>
-      </div>`;
+    allCopiesHTML += `<div class="print-copy${isLast ? ' print-copy--last' : ''}">${buildInvoiceDocHTML(data, copy.label)}</div>`;
   });
 
   document.getElementById('invoice-doc').innerHTML = allCopiesHTML;
@@ -602,120 +860,43 @@ function previewInvoice() {
 //  PREVIEW QUOTATION
 // ══════════════════════════════════════════════
 function previewQuotation() {
-  const quoNo      = document.getElementById('quo-no').value.trim()           || '';
-  const quoDate    = formatDate(document.getElementById('quo-date').value)     || '___';
-  const quoValid   = formatDate(document.getElementById('quo-valid').value)    || '';
-  const clientName = document.getElementById('quo-client-name').value.trim()  || '___';
+  const quoDateRaw = document.getElementById('quo-date').value || '';
+  const quoDate    = formatDateDMY(quoDateRaw);
+  const clientName = document.getElementById('quo-client-name').value.trim()  || '';
   const contact    = document.getElementById('quo-contact').value.trim()      || '';
   const clientAddr = document.getElementById('quo-client-addr').value.trim()  || '';
   const clientPhone= document.getElementById('quo-client-phone').value.trim() || '';
 
-  let itemsHTML = '';
+  const itemRows = [];
   let subTotal = 0, totalGst = 0;
-  const rows = document.querySelectorAll('#quo-items-body tr');
-  let sno = 0;
 
-  rows.forEach(row => {
+  document.querySelectorAll('#quo-items-body tr').forEach(row => {
     const inputs = row.querySelectorAll('input');
-    const name   = inputs[0]?.value.trim();
+    const name   = inputs[0]?.value.trim() || '';
     const code   = inputs[1]?.value.trim() || '';
     const price  = parseFloat(inputs[2]?.value) || 0;
     const sel    = row.querySelector('select');
-    const gstPct = sel ? parseFloat(sel.value) : 5;
+    const gstPct = sel ? parseFloat(sel.value) : 0;
 
     if (!name && price === 0) return;
-    sno++;
-    // Respect GST toggle
     const gstAmt = quoGstEnabled ? parseFloat((price * gstPct / 100).toFixed(2)) : 0;
     const total  = price + gstAmt;
     subTotal += price;
     totalGst += gstAmt;
-
-    // Conditionally include GST columns per row
-    const gstCols = quoGstEnabled
-      ? `<td>${gstPct}%</td><td class="money">₹${gstAmt.toFixed(2)}</td>`
-      : '';
-
-    itemsHTML += `
-      <tr>
-        <td>${sno}</td>
-        <td>${esc(name)}</td>
-        <td>${esc(code)}</td>
-        <td class="money">₹${price.toFixed(2)}</td>
-        ${gstCols}
-        <td class="money"><strong>₹${total.toFixed(2)}</strong></td>
-      </tr>`;
+    itemRows.push({ name, code, price, gstPct, gstAmt, total });
   });
 
-  if (sno === 0) {
+  if (itemRows.length === 0) {
     showToast('Please fill in at least one item row.', 'error');
     return;
   }
 
   const grand = subTotal + totalGst;
 
-  let addrLines = '';
-  if (contact)     addrLines += esc(contact) + '<br>';
-  addrLines += esc(clientAddr).replace(/\n/g, '<br>');
-  if (clientPhone) addrLines += '<br>Ph: ' + esc(clientPhone);
-
-  // Conditional GST headers and totals for the preview document
-  const gstHead    = quoGstEnabled ? '<th>GST</th><th>GST AMT</th>' : '';
-  const gstTotals  = quoGstEnabled
-    ? `<div class="doc-total-row"><span class="tl">Total GST</span><span class="tv">₹${totalGst.toFixed(2)}</span></div>` : '';
-  const valueLabel = quoGstEnabled ? 'VALUE INCL GST' : 'VALUE';
-  const grandLabel = quoGstEnabled ? 'Grand Total (incl. GST)' : 'Total Amount';
-  const subLabel   = quoGstEnabled ? 'Total (excl. GST)' : 'Subtotal';
-
-  const html = `
-  ${companyHeaderHTML('QUOTATION')}
-  <div class="doc-body">
-    <div class="doc-section-row">
-      <div>
-        <div class="doc-section-label">To</div>
-        <div class="doc-to-name">${esc(clientName)}</div>
-        <div class="doc-to-address">${addrLines}</div>
-      </div>
-      <div>
-        <div class="doc-section-label">Quotation Info</div>
-        <div class="doc-meta">
-          ${quoNo ? '<strong>Quotation No.</strong> ' + esc(quoNo) + '<br>' : ''}
-          <strong>Date</strong> ${quoDate}<br>
-          ${quoValid ? '<strong>Valid Until</strong> ' + quoValid + '<br>' : ''}
-        </div>
-      </div>
-    </div>
-
-    <table class="doc-items-table">
-      <thead>
-        <tr>
-          <th style="width:36px">S.NO</th>
-          <th>ITEM NAME</th>
-          <th>PRODUCT CODE</th>
-          <th>UNIT PRICE</th>
-          ${gstHead}
-          <th>${valueLabel}</th>
-        </tr>
-      </thead>
-      <tbody>${itemsHTML}</tbody>
-    </table>
-
-    <div class="doc-totals">
-      <div class="doc-total-row"><span class="tl">${subLabel}</span><span class="tv">₹${subTotal.toFixed(2)}</span></div>
-      ${gstTotals}
-      <div class="doc-total-row grand-total"><span class="tl">${grandLabel}</span><span class="tv">₹${grand.toFixed(2)}</span></div>
-    </div>
-    <div class="amount-words">${amtWords(grand)}</div>
-
-    <div class="doc-terms">
-      <strong>Terms &amp; Conditions:</strong><br>
-      1. This quotation is valid for the period mentioned above.<br>
-      2. Prices are subject to change without prior notice after the validity date.<br>
-      3. Subject to Chennai Jurisdiction Only.
-    </div>
-
-    ${docFooterHTML()}
-  </div>`;
+  const html = buildQuotationDocHTML({
+    quoDate, clientName, contact, clientAddr, clientPhone,
+    itemRows, grand, quoGst: quoGstEnabled,
+  });
 
   document.getElementById('quotation-doc').innerHTML = html;
   document.getElementById('quotation-form-section').style.display = 'none';
@@ -728,12 +909,17 @@ function previewQuotation() {
 //  UTILITIES
 // ══════════════════════════════════════════════
 
-/** Format a YYYY-MM-DD date string to Indian locale (e.g. "04 Apr 2026"). */
+/** Format YYYY-MM-DD → "04 Apr 2026" */
 function formatDate(dateStr) {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(y, m-1, d).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+/** Format YYYY-MM-DD → "04/04/2026" (dd/mm/yyyy) */
+function formatDateDMY(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-');
+  return `${d}/${m}/${y}`;
 }
 
 /** Show a toast notification (type: '' | 'error' | 'info') */

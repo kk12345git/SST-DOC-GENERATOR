@@ -140,12 +140,64 @@
                 <input type="text" id="inv-delivery-note" placeholder="Delivery Note No." autocomplete="off">
               </div>
               <div class="form-group">
-                <label for="inv-dispatch">Dispatch Through</label>
-                <input type="text" id="inv-dispatch" placeholder="Vehicle / courier" autocomplete="off">
+                <label for="inv-mode-payment">Mode / Terms of Payment</label>
+                <input type="text" id="inv-mode-payment" placeholder="Cash / Credit 30 days" autocomplete="off">
               </div>
+            </div>
+            <div class="form-grid form-grid-4" style="margin-top:10px;">
+              <div class="form-group">
+                <label for="inv-ref-no">Reference No.</label>
+                <input type="text" id="inv-ref-no" placeholder="Ref No." autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="inv-ref-date">Ref. Date</label>
+                <input type="date" id="inv-ref-date">
+              </div>
+              <div class="form-group">
+                <label for="inv-buyer-order-no">Buyer's Order No.</label>
+                <input type="text" id="inv-buyer-order-no" placeholder="PO Number" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="inv-buyer-order-date">Buyer Order Date</label>
+                <input type="date" id="inv-buyer-order-date">
+              </div>
+            </div>
+            <div class="form-grid form-grid-4" style="margin-top:10px;">
+              <div class="form-group">
+                <label for="inv-dispatch-doc-no">Dispatch Doc No.</label>
+                <input type="text" id="inv-dispatch-doc-no" placeholder="Dispatch Doc No." autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="inv-deliv-note-date">Delivery Note Date</label>
+                <input type="date" id="inv-deliv-note-date">
+              </div>
+              <div class="form-group">
+                <label for="inv-dispatched-through">Dispatched Through</label>
+                <input type="text" id="inv-dispatched-through" placeholder="Vehicle / courier" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="inv-destination">Destination</label>
+                <input type="text" id="inv-destination" placeholder="City / address" autocomplete="off">
+              </div>
+            </div>
+            <div class="form-grid form-grid-4" style="margin-top:10px;">
+              <div class="form-group">
+                <label for="inv-city-loading">City / Port of Loading</label>
+                <input type="text" id="inv-city-loading" placeholder="Chennai" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="inv-city-discharge">City / Port of Discharge</label>
+                <input type="text" id="inv-city-discharge" placeholder="Destination city" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="inv-terms-delivery">Terms of Delivery</label>
+                <input type="text" id="inv-terms-delivery" placeholder="THROUGH OWN STAFF" autocomplete="off">
+              </div>
+              <div class="form-group"><!-- spacer --></div>
             </div>
           </div>
         </div>
+
 
         <!-- Buyer Details -->
         <div class="form-card">
@@ -193,7 +245,7 @@
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th style="text-align:left;min-width:200px;">Description of Goods</th>
+                    <th style="text-align:left;min-width:180px;">Description of Goods</th>
                     <th>HSN/SAC</th>
                     <th>Qty</th>
                     <th>Unit</th>
@@ -201,6 +253,9 @@
                     <th class="gst-col">GST %</th>
                     <th class="gst-col">GST Amt</th>
                     <th>Amount (₹)</th>
+                    <th>Batch</th>
+                    <th>Mfg Dt</th>
+                    <th>Expiry</th>
                     <th></th>
                   </tr>
                 </thead>
