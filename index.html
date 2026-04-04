@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- SEO -->
+  <title>SST Super Sun Traders – Invoice &amp; Quotation</title>
+  <meta name="description" content="SST Super Sun Traders internal pricing app. Generate GST-compliant tax invoices and professional quotations. Chennai.">
+  <meta name="robots" content="noindex, nofollow">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     MOBILE MENU TOGGLE
+     ══════════════════════════════════════════ -->
+<button class="menu-toggle" id="menu-toggle" aria-label="Open navigation menu">☰</button>
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR
+     ══════════════════════════════════════════ -->
+<aside class="sidebar" aria-label="Primary navigation">
+
+  <div class="sidebar-logo">
+    <div class="logo-circle" aria-hidden="true">SST</div>
+    <div class="sidebar-brand">SST Super Sun Traders<span>Chennai – 600 024</span></div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-label">Main Menu</div>
+
+    <button class="nav-btn active" data-page="home" onclick="showPage('home')">
+      <span class="icon" aria-hidden="true">🏠</span> Dashboard
+    </button>
+
+    <button class="nav-btn" data-page="invoice" onclick="showPage('invoice')">
+      <span class="icon" aria-hidden="true">🧾</span> Tax Invoice
+    </button>
+
+    <button class="nav-btn" data-page="quotation" onclick="showPage('quotation')">
+      <span class="icon" aria-hidden="true">📋</span> Quotation
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    GST: 33BKGPV4919L1ZM<br>
+    Ph: 044 4218 8202
+  </div>
+
+</aside>
+
+<!-- ══════════════════════════════════════════
+     MAIN CONTENT
+     ══════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Dashboard</div>
+    <div class="topbar-actions" id="topbar-actions">
+      <button class="btn btn-ghost" onclick="resetForm()" title="Clear all fields">🔄 Reset</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ──────────────────────────────────────
+         HOME / DASHBOARD PAGE
+         ────────────────────────────────────── -->
+    <div class="page active" id="page-home">
+
+      <div class="welcome-header">
+        <h1>Welcome, SST 👋</h1>
+        <p>Select a module to create and print your documents.</p>
+      </div>
+
+      <div class="dashboard-cards">
+
+        <div class="dash-card" onclick="showPage('invoice')" role="button" aria-label="Create Tax Invoice">
+          <div class="dash-icon" aria-hidden="true">🧾</div>
+          <div class="dash-card-title">Tax Invoice</div>
+          <div class="dash-card-desc">
+            Create GST-compliant tax invoices with buyer details, items,
+            CGST &amp; SGST calculation. Print-ready format.
+          </div>
+          <div class="dash-card-arrow" aria-hidden="true">→ Create Invoice</div>
+        </div>
+
+        <div class="dash-card" onclick="showPage('quotation')" role="button" aria-label="Create Quotation">
+          <div class="dash-icon" aria-hidden="true">📋</div>
+          <div class="dash-card-title">Quotation</div>
+          <div class="dash-card-desc">
+            Generate professional quotations with product codes, unit prices,
+            GST amounts. Send to clients instantly.
+          </div>
+          <div class="dash-card-arrow" aria-hidden="true">→ Create Quotation</div>
+        </div>
+
+      </div>
+
+      <!-- Company Details Card -->
+      <div class="company-info-box">
+        <h2>📍 Company Details</h2>
+        <p>
+          <strong>SST SUPER SUN TRADERS</strong><br>
+          #29/23, 8th Street, Dr.Subbaraya Nagar, Kodambakkam, Chennai – 600 024<br>
+          GST: 33BKGPV4919L1ZM &nbsp;|&nbsp; Ph: 044 4218 8202 / 4208 2575<br>
+          Email: supersuntraders@gmail.com
+        </p>
+      </div>
+
+    </div><!-- /page-home -->
+
+    <!-- ──────────────────────────────────────
+         TAX INVOICE PAGE
+         ────────────────────────────────────── -->
+    <div class="page" id="page-invoice">
+
+      <!-- Form section -->
+      <div id="invoice-form-section">
+
+        <!-- Invoice Details -->
+        <div class="form-card">
+          <div class="form-card-header">📄 Invoice Details</div>
+          <div class="form-card-body">
+            <div class="form-grid form-grid-4">
+              <div class="form-group">
+                <label for="inv-no">Invoice No.</label>
+                <input type="text" id="inv-no" placeholder="SST/___/25-26" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="inv-date">Invoice Date</label>
+                <input type="date" id="inv-date">
+              </div>
+              <div class="form-group">
+                <label for="inv-delivery-note">Delivery Note</label>
+                <input type="text" id="inv-delivery-note" placeholder="Delivery Note No." autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="inv-dispatch">Dispatch Through</label>
+                <input type="text" id="inv-dispatch" placeholder="Vehicle / courier" autocomplete="off">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Buyer Details -->
+        <div class="form-card">
+          <div class="form-card-header">🏥 Buyer Details</div>
+          <div class="form-card-body">
+            <div class="form-grid form-grid-2">
+              <div class="form-group">
+                <label for="inv-buyer-name">Buyer Name</label>
+                <input type="text" id="inv-buyer-name" placeholder="Hospital / Company Name" autocomplete="organization">
+              </div>
+              <div class="form-group">
+                <label for="inv-buyer-gst">Buyer GST (optional)</label>
+                <input type="text" id="inv-buyer-gst" placeholder="GST Number" autocomplete="off">
+              </div>
+            </div>
+            <div class="form-grid form-grid-2" style="margin-top:12px;">
+              <div class="form-group">
+                <label for="inv-buyer-addr">Address</label>
+                <textarea id="inv-buyer-addr" placeholder="Full address..." autocomplete="street-address"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="inv-buyer-phone">Phone</label>
+                <input type="tel" id="inv-buyer-phone" placeholder="Phone number" autocomplete="tel">
+                <label for="inv-buyer-email" style="margin-top:8px;">Email</label>
+                <input type="email" id="inv-buyer-email" placeholder="Email address" autocomplete="email" style="margin-top:4px;">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="form-card">
+          <div class="form-card-header">📦 Items</div>
+          <div class="form-card-body">
+            <div class="items-table-wrapper">
+              <table class="items-table" id="inv-items-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th style="text-align:left;min-width:200px;">Description of Goods</th>
+                    <th>HSN/SAC</th>
+                    <th>Qty</th>
+                    <th>Unit</th>
+                    <th>Rate (₹)</th>
+                    <th>GST %</th>
+                    <th>GST Amt</th>
+                    <th>Amount (₹)</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="inv-items-body"></tbody>
+              </table>
+            </div>
+            <button class="add-row-btn" onclick="addInvRow()">+ Add Item Row</button>
+
+            <!-- Running Totals -->
+            <div class="totals-box" id="inv-totals">
+              <div class="total-row">
+                <span class="label">Subtotal</span>
+                <span class="value" id="inv-subtotal">₹0.00</span>
+              </div>
+              <div class="total-row">
+                <span class="label">CGST</span>
+                <span class="value" id="inv-cgst">₹0.00</span>
+              </div>
+              <div class="total-row">
+                <span class="label">SGST</span>
+                <span class="value" id="inv-sgst">₹0.00</span>
+              </div>
+              <div class="total-row grand">
+                <span class="label">Grand Total</span>
+                <span class="value" id="inv-grand">₹0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action -->
+        <div style="text-align:right;" class="no-print">
+          <button class="btn btn-primary" onclick="previewInvoice()">👁 Preview &amp; Print</button>
+        </div>
+
+      </div><!-- /invoice-form-section -->
+
+      <!-- Print Preview Area -->
+      <div class="print-area" id="invoice-print-area">
+        <div style="text-align:right;margin-bottom:16px;" class="no-print">
+          <button class="btn btn-ghost" onclick="backToForm('invoice')" style="margin-right:8px;">← Edit</button>
+          <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
+        </div>
+        <div class="print-doc" id="invoice-doc"></div>
+      </div>
+
+    </div><!-- /page-invoice -->
+
+    <!-- ──────────────────────────────────────
+         QUOTATION PAGE
+         ────────────────────────────────────── -->
+    <div class="page" id="page-quotation">
+
+      <div id="quotation-form-section">
+
+        <!-- Quotation Details -->
+        <div class="form-card">
+          <div class="form-card-header">📋 Quotation Details</div>
+          <div class="form-card-body">
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label for="quo-no">Quotation No. (optional)</label>
+                <input type="text" id="quo-no" placeholder="QUO/___/25-26" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="quo-date">Date</label>
+                <input type="date" id="quo-date">
+              </div>
+              <div class="form-group">
+                <label for="quo-valid">Valid Until (optional)</label>
+                <input type="date" id="quo-valid">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Client Details -->
+        <div class="form-card">
+          <div class="form-card-header">🏥 Client Details</div>
+          <div class="form-card-body">
+            <div class="form-grid form-grid-2">
+              <div class="form-group">
+                <label for="quo-client-name">Client / Hospital Name</label>
+                <input type="text" id="quo-client-name" placeholder="Dr. / Hospital Name" autocomplete="organization">
+              </div>
+              <div class="form-group">
+                <label for="quo-contact">Contact Person</label>
+                <input type="text" id="quo-contact" placeholder="Contact person name" autocomplete="name">
+              </div>
+            </div>
+            <div class="form-grid form-grid-2" style="margin-top:12px;">
+              <div class="form-group">
+                <label for="quo-client-addr">Address</label>
+                <textarea id="quo-client-addr" placeholder="Full address..." autocomplete="street-address"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="quo-client-phone">Phone</label>
+                <input type="tel" id="quo-client-phone" placeholder="Phone number" autocomplete="tel">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="form-card">
+          <div class="form-card-header">🛒 Items / Products</div>
+          <div class="form-card-body">
+            <div class="items-table-wrapper">
+              <table class="items-table" id="quo-items-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th style="text-align:left;min-width:200px;">Item Name</th>
+                    <th>Product Code</th>
+                    <th>Unit Price (₹)</th>
+                    <th>GST %</th>
+                    <th>GST Amt (₹)</th>
+                    <th>Value Incl. GST (₹)</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="quo-items-body"></tbody>
+              </table>
+            </div>
+            <button class="add-row-btn" onclick="addQuoRow()">+ Add Item Row</button>
+
+            <!-- Running Totals -->
+            <div class="totals-box" id="quo-totals">
+              <div class="total-row">
+                <span class="label">Total (excl. GST)</span>
+                <span class="value" id="quo-subtotal">₹0.00</span>
+              </div>
+              <div class="total-row">
+                <span class="label">Total GST</span>
+                <span class="value" id="quo-gst">₹0.00</span>
+              </div>
+              <div class="total-row grand">
+                <span class="label">Grand Total (incl. GST)</span>
+                <span class="value" id="quo-grand">₹0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action -->
+        <div style="text-align:right;" class="no-print">
+          <button class="btn btn-primary" onclick="previewQuotation()">👁 Preview &amp; Print</button>
+        </div>
+
+      </div><!-- /quotation-form-section -->
+
+      <!-- Print Preview Area -->
+      <div class="print-area" id="quotation-print-area">
+        <div style="text-align:right;margin-bottom:16px;" class="no-print">
+          <button class="btn btn-ghost" onclick="backToForm('quotation')" style="margin-right:8px;">← Edit</button>
+          <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
+        </div>
+        <div class="print-doc" id="quotation-doc"></div>
+      </div>
+
+    </div><!-- /page-quotation -->
+
+  </div><!-- /content -->
+</main>
+
+<!-- Toast Notification -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- JavaScript (loaded at end of body for best performance) -->
+<script src="app.js"></script>
+
+</body>
+</html>
