@@ -1,7 +1,60 @@
+/* ════════════════════════════════════════════
+   GST TOGGLE  (in Items card header)
+   ════════════════════════════════════════════ */
+.form-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gst-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.gst-toggle-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.65);
+  text-transform: uppercase;
+}
+
+.gst-toggle-btn {
+  padding: 4px 14px;
+  border-radius: 20px;
+  border: 1.5px solid rgba(255,255,255,0.28);
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.gst-toggle-btn:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border-color: rgba(255,255,255,0.5);
+}
+.gst-toggle-btn.active {
+  background: rgba(255,255,255,0.22);
+  color: #fff;
+  border-color: rgba(255,255,255,0.7);
+}
+
+/* Hide GST columns when no-gst class is toggled on the table */
+.items-table.no-gst .gst-col {
+  display: none;
+}
+
 /* ══════════════════════════════════════════════
    SST SUPER SUN TRADERS – Pricing App Styles
    style.css
    ══════════════════════════════════════════════ */
+
 
 /* ── GOOGLE FONTS ── */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');

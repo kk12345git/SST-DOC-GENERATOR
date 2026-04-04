@@ -178,7 +178,15 @@
 
         <!-- Items Table -->
         <div class="form-card">
-          <div class="form-card-header">📦 Items</div>
+          <div class="form-card-header">
+            📦 Items
+            <!-- GST Toggle -->
+            <div class="gst-toggle-group">
+              <span class="gst-toggle-label">GST:</span>
+              <button class="gst-toggle-btn active" id="inv-gst-on"  onclick="setInvGst(true)">With GST</button>
+              <button class="gst-toggle-btn"        id="inv-gst-off" onclick="setInvGst(false)">Without GST</button>
+            </div>
+          </div>
           <div class="form-card-body">
             <div class="items-table-wrapper">
               <table class="items-table" id="inv-items-table">
@@ -190,8 +198,8 @@
                     <th>Qty</th>
                     <th>Unit</th>
                     <th>Rate (₹)</th>
-                    <th>GST %</th>
-                    <th>GST Amt</th>
+                    <th class="gst-col">GST %</th>
+                    <th class="gst-col">GST Amt</th>
                     <th>Amount (₹)</th>
                     <th></th>
                   </tr>
@@ -207,16 +215,16 @@
                 <span class="label">Subtotal</span>
                 <span class="value" id="inv-subtotal">₹0.00</span>
               </div>
-              <div class="total-row">
+              <div class="total-row" id="inv-cgst-row">
                 <span class="label">CGST</span>
                 <span class="value" id="inv-cgst">₹0.00</span>
               </div>
-              <div class="total-row">
+              <div class="total-row" id="inv-sgst-row">
                 <span class="label">SGST</span>
                 <span class="value" id="inv-sgst">₹0.00</span>
               </div>
               <div class="total-row grand">
-                <span class="label">Grand Total</span>
+                <span class="label" id="inv-grand-label">Grand Total</span>
                 <span class="value" id="inv-grand">₹0.00</span>
               </div>
             </div>
@@ -230,14 +238,17 @@
 
       </div><!-- /invoice-form-section -->
 
+
       <!-- Print Preview Area -->
       <div class="print-area" id="invoice-print-area">
         <div style="text-align:right;margin-bottom:16px;" class="no-print">
           <button class="btn btn-ghost" onclick="backToForm('invoice')" style="margin-right:8px;">← Edit</button>
+          <button class="btn btn-ghost" onclick="downloadPDF('invoice')" style="margin-right:8px;">⬇ Download PDF</button>
           <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
         </div>
-        <div class="print-doc" id="invoice-doc"></div>
+        <div id="invoice-doc"></div>
       </div>
+
 
     </div><!-- /page-invoice -->
 
@@ -298,7 +309,15 @@
 
         <!-- Items Table -->
         <div class="form-card">
-          <div class="form-card-header">🛒 Items / Products</div>
+          <div class="form-card-header">
+            🛒 Items / Products
+            <!-- GST Toggle -->
+            <div class="gst-toggle-group">
+              <span class="gst-toggle-label">GST:</span>
+              <button class="gst-toggle-btn active" id="quo-gst-on"  onclick="setQuoGst(true)">With GST</button>
+              <button class="gst-toggle-btn"        id="quo-gst-off" onclick="setQuoGst(false)">Without GST</button>
+            </div>
+          </div>
           <div class="form-card-body">
             <div class="items-table-wrapper">
               <table class="items-table" id="quo-items-table">
@@ -308,8 +327,8 @@
                     <th style="text-align:left;min-width:200px;">Item Name</th>
                     <th>Product Code</th>
                     <th>Unit Price (₹)</th>
-                    <th>GST %</th>
-                    <th>GST Amt (₹)</th>
+                    <th class="gst-col">GST %</th>
+                    <th class="gst-col">GST Amt (₹)</th>
                     <th>Value Incl. GST (₹)</th>
                     <th></th>
                   </tr>
@@ -325,12 +344,12 @@
                 <span class="label">Total (excl. GST)</span>
                 <span class="value" id="quo-subtotal">₹0.00</span>
               </div>
-              <div class="total-row">
+              <div class="total-row" id="quo-gst-row">
                 <span class="label">Total GST</span>
                 <span class="value" id="quo-gst">₹0.00</span>
               </div>
               <div class="total-row grand">
-                <span class="label">Grand Total (incl. GST)</span>
+                <span class="label" id="quo-grand-label">Grand Total (incl. GST)</span>
                 <span class="value" id="quo-grand">₹0.00</span>
               </div>
             </div>
@@ -344,14 +363,17 @@
 
       </div><!-- /quotation-form-section -->
 
+
       <!-- Print Preview Area -->
       <div class="print-area" id="quotation-print-area">
         <div style="text-align:right;margin-bottom:16px;" class="no-print">
           <button class="btn btn-ghost" onclick="backToForm('quotation')" style="margin-right:8px;">← Edit</button>
+          <button class="btn btn-ghost" onclick="downloadPDF('quotation')" style="margin-right:8px;">⬇ Download PDF</button>
           <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
         </div>
-        <div class="print-doc" id="quotation-doc"></div>
+        <div id="quotation-doc"></div>
       </div>
+
 
     </div><!-- /page-quotation -->
 
@@ -361,8 +383,11 @@
 <!-- Toast Notification -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<!-- JavaScript (loaded at end of body for best performance) -->
+<!-- html2pdf.js CDN — enables the Download PDF button -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<!-- App logic -->
 <script src="app.js"></script>
+
 
 </body>
 </html>

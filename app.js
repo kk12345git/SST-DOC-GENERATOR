@@ -4,9 +4,12 @@
 // ══════════════════════════════════════════════
 
 // ── STATE ──────────────────────────────────────
-let currentPage = 'home';
+let currentPage  = 'home';
 let invRowCount  = 0;
 let quoRowCount  = 0;
+let invGstEnabled = true;   // GST toggle for Invoice
+let quoGstEnabled = true;   // GST toggle for Quotation
+
 
 // ── INITIALISE ON LOAD ──────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
@@ -86,22 +89,63 @@ function resetForm() {
     document.getElementById('inv-items-body').innerHTML = '';
     invRowCount = 0;
     addInvRow(); addInvRow(); addInvRow();
+    setInvGst(true); // reset GST toggle to ON
     calcInvTotals();
-    backToForm('invoice'); // FIX: also hide print area when resetting
+    backToForm('invoice');
   } else if (currentPage === 'quotation') {
     document.querySelectorAll('#page-quotation input, #page-quotation textarea').forEach(el => el.value = '');
     document.getElementById('quo-items-body').innerHTML = '';
     quoRowCount = 0;
     addQuoRow(); addQuoRow(); addQuoRow();
+    setQuoGst(true); // reset GST toggle to ON
     calcQuoTotals();
     backToForm('quotation');
   }
-  // Re-set today's date after reset
   const today = new Date().toISOString().split('T')[0];
   if (currentPage === 'invoice')   document.getElementById('inv-date').value = today;
   if (currentPage === 'quotation') document.getElementById('quo-date').value = today;
   showToast('Form has been reset.');
 }
+
+// ══════════════════════════════════════════════
+//  GST TOGGLE
+// ══════════════════════════════════════════════
+
+/** Toggle With / Without GST for the Invoice form and totals. */
+function setInvGst(enabled) {
+  invGstEnabled = enabled;
+  // Toggle active class on the two buttons
+  document.getElementById('inv-gst-on') ?.classList.toggle('active', enabled);
+  document.getElementById('inv-gst-off')?.classList.toggle('active', !enabled);
+  // Hide/show GST columns in the live form table
+  const table = document.getElementById('inv-items-table');
+  if (table) table.classList.toggle('no-gst', !enabled);
+  // Hide/show CGST & SGST rows in the totals box
+  const cgstRow = document.getElementById('inv-cgst-row');
+  const sgstRow = document.getElementById('inv-sgst-row');
+  if (cgstRow) cgstRow.style.display = enabled ? '' : 'none';
+  if (sgstRow) sgstRow.style.display = enabled ? '' : 'none';
+  // Update Grand Total label
+  const grandLabel = document.getElementById('inv-grand-label');
+  if (grandLabel) grandLabel.textContent = enabled ? 'Grand Total' : 'Total Amount';
+  calcInvTotals();
+}
+
+/** Toggle With / Without GST for the Quotation form and totals. */
+function setQuoGst(enabled) {
+  quoGstEnabled = enabled;
+  document.getElementById('quo-gst-on') ?.classList.toggle('active', enabled);
+  document.getElementById('quo-gst-off')?.classList.toggle('active', !enabled);
+  const table = document.getElementById('quo-items-table');
+  if (table) table.classList.toggle('no-gst', !enabled);
+  const gstRow = document.getElementById('quo-gst-row');
+  if (gstRow) gstRow.style.display = enabled ? '' : 'none';
+  // Update Grand Total label
+  const grandLabel = document.getElementById('quo-grand-label');
+  if (grandLabel) grandLabel.textContent = enabled ? 'Grand Total (incl. GST)' : 'Total Amount';
+  calcQuoTotals();
+}
+
 
 // ══════════════════════════════════════════════
 //  INVOICE ROWS
@@ -127,7 +171,7 @@ function addInvRow() {
     <td><input type="number" placeholder="0" min="0" step="1" style="width:70px" oninput="calcInvTotals()" aria-label="Quantity"></td>
     <td><input type="text" placeholder="pcs" style="width:55px" aria-label="Unit"></td>
     <td><input type="number" placeholder="0.00" min="0" step="0.01" style="width:90px" oninput="calcInvTotals()" aria-label="Rate"></td>
-    <td>
+    <td class="gst-col">
       <select style="padding:7px 6px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;" onchange="calcInvTotals()" aria-label="GST Percentage">
         <option value="5">5%</option>
         <option value="12">12%</option>
@@ -136,12 +180,13 @@ function addInvRow() {
         <option value="0">0%</option>
       </select>
     </td>
-    <td><input type="text" placeholder="0.00" readonly style="background:#f9fafb;width:80px;font-family:'DM Mono',monospace;font-size:12px;" id="inv-gstamt-${n}" aria-label="GST Amount (computed)"></td>
+    <td class="gst-col"><input type="text" placeholder="0.00" readonly style="background:#f9fafb;width:80px;font-family:'DM Mono',monospace;font-size:12px;" id="inv-gstamt-${n}" aria-label="GST Amount (computed)"></td>
     <td><input type="text" placeholder="0.00" readonly style="background:#f9fafb;width:90px;font-family:'DM Mono',monospace;font-size:12px;" id="inv-amt-${n}" aria-label="Total Amount (computed)"></td>
     <td><button class="del-row" onclick="delRow('inv-row-${n}','inv')" title="Delete row" aria-label="Delete row ${n}">✕</button></td>
   `;
   tbody.appendChild(tr);
 }
+
 
 /** Remove a row by id and recalculate totals. */
 function delRow(id, type) {
@@ -168,19 +213,19 @@ function calcInvTotals() {
 
   rows.forEach(row => {
     const inputs = row.querySelectorAll('input');
-    // inputs[2] = qty, inputs[4] = rate  (0=desc, 1=hsn, 2=qty, 3=unit, 4=rate)
+    // inputs: [0]=desc, [1]=hsn, [2]=qty, [3]=unit, [4]=rate
     const qty    = parseFloat(inputs[2]?.value) || 0;
     const rate   = parseFloat(inputs[4]?.value) || 0;
     const sel    = row.querySelector('select');
     const gstPct = sel ? parseFloat(sel.value) : 5;
     const base   = qty * rate;
-    const gstAmt = parseFloat((base * gstPct / 100).toFixed(2));
+    // Respect GST toggle — zero out tax when disabled
+    const gstAmt = invGstEnabled ? parseFloat((base * gstPct / 100).toFixed(2)) : 0;
     const total  = parseFloat((base + gstAmt).toFixed(2));
 
     sub      += base;
     totalGst += gstAmt;
 
-    // Update computed fields using row id
     const n    = row.id ? row.id.split('-')[2] : null;
     const gEl  = n ? document.getElementById('inv-gstamt-' + n) : null;
     const aEl  = n ? document.getElementById('inv-amt-'    + n) : null;
@@ -197,6 +242,7 @@ function calcInvTotals() {
   document.getElementById('inv-sgst').textContent     = '₹' + sgst.toFixed(2);
   document.getElementById('inv-grand').textContent    = '₹' + grand.toFixed(2);
 }
+
 
 // ══════════════════════════════════════════════
 //  QUOTATION ROWS
@@ -219,7 +265,7 @@ function addQuoRow() {
     <td><input class="left" type="text" placeholder="Item name / description" oninput="calcQuoTotals()" aria-label="Item name"></td>
     <td><input type="text" placeholder="Code" style="width:100px" aria-label="Product Code"></td>
     <td><input type="number" placeholder="0.00" min="0" step="0.01" style="width:100px" oninput="calcQuoTotals()" aria-label="Unit Price"></td>
-    <td>
+    <td class="gst-col">
       <select style="padding:7px 6px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;" onchange="calcQuoTotals()" aria-label="GST Percentage">
         <option value="5">5%</option>
         <option value="12">12%</option>
@@ -228,12 +274,13 @@ function addQuoRow() {
         <option value="0">0%</option>
       </select>
     </td>
-    <td><input type="text" readonly placeholder="0.00" style="background:#f9fafb;width:90px;font-family:'DM Mono',monospace;font-size:12px;" id="quo-gstamt-${n}" aria-label="GST Amount (computed)"></td>
+    <td class="gst-col"><input type="text" readonly placeholder="0.00" style="background:#f9fafb;width:90px;font-family:'DM Mono',monospace;font-size:12px;" id="quo-gstamt-${n}" aria-label="GST Amount (computed)"></td>
     <td><input type="text" readonly placeholder="0.00" style="background:#f9fafb;width:100px;font-family:'DM Mono',monospace;font-size:12px;" id="quo-total-${n}" aria-label="Total incl. GST (computed)"></td>
     <td><button class="del-row" onclick="delRow('quo-row-${n}','quo')" title="Delete row" aria-label="Delete row ${n}">✕</button></td>
   `;
   tbody.appendChild(tr);
 }
+
 
 /** Calculate and display Quotation totals. */
 function calcQuoTotals() {
@@ -246,7 +293,8 @@ function calcQuoTotals() {
     const price  = parseFloat(inputs[2]?.value) || 0;
     const sel    = row.querySelector('select');
     const gstPct = sel ? parseFloat(sel.value) : 5;
-    const gstAmt = parseFloat((price * gstPct / 100).toFixed(2));
+    // Respect GST toggle
+    const gstAmt = quoGstEnabled ? parseFloat((price * gstPct / 100).toFixed(2)) : 0;
     const total  = parseFloat((price + gstAmt).toFixed(2));
 
     subTotal += price;
@@ -264,6 +312,7 @@ function calcQuoTotals() {
   document.getElementById('quo-gst').textContent      = '₹' + totalGst.toFixed(2);
   document.getElementById('quo-grand').textContent    = '₹' + grand.toFixed(2);
 }
+
 
 // ══════════════════════════════════════════════
 //  AMOUNT IN WORDS  (Indian numbering)
@@ -385,12 +434,20 @@ const INVOICE_COPIES = [
 function buildInvoiceBodyHTML(data) {
   const { invNo, invDate, delivNote, dispatch,
           buyerName, buyerGst, buyerAddr, buyerPhone, buyerEmail,
-          itemsHTML, sub, cgst, sgst, grand } = data;
+          itemsHTML, sub, cgst, sgst, grand, gstEnabled } = data;
 
   let addrLines = esc(buyerAddr).replace(/\n/g, '<br>');
   if (buyerPhone) addrLines += '<br>Ph: '   + esc(buyerPhone);
   if (buyerEmail) addrLines += '<br>'       + esc(buyerEmail);
   if (buyerGst)   addrLines += '<br>GST: '  + esc(buyerGst);
+
+  // Conditional GST columns in the preview table
+  const gstHead   = gstEnabled ? '<th>GST%</th><th>GST Amt</th>' : '';
+  const gstTotals = gstEnabled ? `
+      <div class="doc-total-row"><span class="tl">CGST</span><span class="tv">₹${cgst.toFixed(2)}</span></div>
+      <div class="doc-total-row"><span class="tl">SGST</span><span class="tv">₹${sgst.toFixed(2)}</span></div>` : '';
+  const subtotalLabel = gstEnabled ? 'Taxable Value' : 'Subtotal';
+  const grandLabel    = gstEnabled ? 'Grand Total'   : 'Total Amount';
 
   return `
   <div class="doc-body">
@@ -421,8 +478,7 @@ function buildInvoiceBodyHTML(data) {
           <th>Qty</th>
           <th>Unit</th>
           <th>Rate</th>
-          <th>GST%</th>
-          <th>GST Amt</th>
+          ${gstHead}
           <th>Amount</th>
         </tr>
       </thead>
@@ -430,10 +486,9 @@ function buildInvoiceBodyHTML(data) {
     </table>
 
     <div class="doc-totals">
-      <div class="doc-total-row"><span class="tl">Taxable Value</span><span class="tv">₹${sub.toFixed(2)}</span></div>
-      <div class="doc-total-row"><span class="tl">CGST</span><span class="tv">₹${cgst.toFixed(2)}</span></div>
-      <div class="doc-total-row"><span class="tl">SGST</span><span class="tv">₹${sgst.toFixed(2)}</span></div>
-      <div class="doc-total-row grand-total"><span class="tl">Grand Total</span><span class="tv">₹${grand.toFixed(2)}</span></div>
+      <div class="doc-total-row"><span class="tl">${subtotalLabel}</span><span class="tv">₹${sub.toFixed(2)}</span></div>
+      ${gstTotals}
+      <div class="doc-total-row grand-total"><span class="tl">${grandLabel}</span><span class="tv">₹${grand.toFixed(2)}</span></div>
     </div>
     <div class="amount-words">${amtWords(grand)}</div>
 
@@ -447,6 +502,7 @@ function buildInvoiceBodyHTML(data) {
     ${docFooterHTML()}
   </div>`;
 }
+
 
 function previewInvoice() {
   // ── Read form values ────────────────────────
@@ -477,14 +533,20 @@ function previewInvoice() {
     const sel    = row.querySelector('select');
     const gstPct = sel ? parseFloat(sel.value) : 5;
 
-    if (!desc && qty === 0 && rate === 0) return; // skip blank rows
+    if (!desc && qty === 0 && rate === 0) return;
 
     sno++;
     const base   = qty * rate;
-    const gstAmt = parseFloat((base * gstPct / 100).toFixed(2));
+    // Respect GST toggle in preview too
+    const gstAmt = invGstEnabled ? parseFloat((base * gstPct / 100).toFixed(2)) : 0;
     const total  = base + gstAmt;
     sub      += base;
     totalGst += gstAmt;
+
+    // Conditionally include GST columns per row
+    const gstCols = invGstEnabled
+      ? `<td>${gstPct}%</td><td class="money">₹${gstAmt.toFixed(2)}</td>`
+      : '';
 
     itemsHTML += `
       <tr>
@@ -494,8 +556,7 @@ function previewInvoice() {
         <td>${qty}</td>
         <td>${esc(unit)}</td>
         <td class="money">₹${rate.toFixed(2)}</td>
-        <td>${gstPct}%</td>
-        <td class="money">₹${gstAmt.toFixed(2)}</td>
+        ${gstCols}
         <td class="money"><strong>₹${total.toFixed(2)}</strong></td>
       </tr>`;
   });
@@ -509,11 +570,12 @@ function previewInvoice() {
   const sgst  = totalGst / 2;
   const grand = sub + totalGst;
 
-  // ── Shared data payload ─────────────────────
+  // ── Shared data payload (includes gstEnabled flag) ──
   const data = {
     invNo, invDate, delivNote, dispatch,
     buyerName, buyerGst, buyerAddr, buyerPhone, buyerEmail,
     itemsHTML, sub, cgst, sgst, grand,
+    gstEnabled: invGstEnabled,
   };
 
   // ── Generate all 3 copies ───────────────────
@@ -532,8 +594,9 @@ function previewInvoice() {
   document.getElementById('invoice-doc').innerHTML = allCopiesHTML;
   document.getElementById('invoice-form-section').style.display = 'none';
   document.getElementById('invoice-print-area').style.display   = 'block';
-  showToast('3 invoice copies ready to print!');
+  showToast('3 invoice copies ready — print or download!');
 }
+
 
 // ══════════════════════════════════════════════
 //  PREVIEW QUOTATION
@@ -554,7 +617,6 @@ function previewQuotation() {
 
   rows.forEach(row => {
     const inputs = row.querySelectorAll('input');
-    // inputs[0]=name, [1]=code, [2]=price
     const name   = inputs[0]?.value.trim();
     const code   = inputs[1]?.value.trim() || '';
     const price  = parseFloat(inputs[2]?.value) || 0;
@@ -563,10 +625,16 @@ function previewQuotation() {
 
     if (!name && price === 0) return;
     sno++;
-    const gstAmt = parseFloat((price * gstPct / 100).toFixed(2));
+    // Respect GST toggle
+    const gstAmt = quoGstEnabled ? parseFloat((price * gstPct / 100).toFixed(2)) : 0;
     const total  = price + gstAmt;
     subTotal += price;
     totalGst += gstAmt;
+
+    // Conditionally include GST columns per row
+    const gstCols = quoGstEnabled
+      ? `<td>${gstPct}%</td><td class="money">₹${gstAmt.toFixed(2)}</td>`
+      : '';
 
     itemsHTML += `
       <tr>
@@ -574,8 +642,7 @@ function previewQuotation() {
         <td>${esc(name)}</td>
         <td>${esc(code)}</td>
         <td class="money">₹${price.toFixed(2)}</td>
-        <td>${gstPct}%</td>
-        <td class="money">₹${gstAmt.toFixed(2)}</td>
+        ${gstCols}
         <td class="money"><strong>₹${total.toFixed(2)}</strong></td>
       </tr>`;
   });
@@ -591,6 +658,14 @@ function previewQuotation() {
   if (contact)     addrLines += esc(contact) + '<br>';
   addrLines += esc(clientAddr).replace(/\n/g, '<br>');
   if (clientPhone) addrLines += '<br>Ph: ' + esc(clientPhone);
+
+  // Conditional GST headers and totals for the preview document
+  const gstHead    = quoGstEnabled ? '<th>GST</th><th>GST AMT</th>' : '';
+  const gstTotals  = quoGstEnabled
+    ? `<div class="doc-total-row"><span class="tl">Total GST</span><span class="tv">₹${totalGst.toFixed(2)}</span></div>` : '';
+  const valueLabel = quoGstEnabled ? 'VALUE INCL GST' : 'VALUE';
+  const grandLabel = quoGstEnabled ? 'Grand Total (incl. GST)' : 'Total Amount';
+  const subLabel   = quoGstEnabled ? 'Total (excl. GST)' : 'Subtotal';
 
   const html = `
   ${companyHeaderHTML('QUOTATION')}
@@ -618,23 +693,22 @@ function previewQuotation() {
           <th>ITEM NAME</th>
           <th>PRODUCT CODE</th>
           <th>UNIT PRICE</th>
-          <th>GST</th>
-          <th>GST AMT</th>
-          <th>VALUE INCL GST</th>
+          ${gstHead}
+          <th>${valueLabel}</th>
         </tr>
       </thead>
       <tbody>${itemsHTML}</tbody>
     </table>
 
     <div class="doc-totals">
-      <div class="doc-total-row"><span class="tl">Total (excl. GST)</span><span class="tv">₹${subTotal.toFixed(2)}</span></div>
-      <div class="doc-total-row"><span class="tl">Total GST</span><span class="tv">₹${totalGst.toFixed(2)}</span></div>
-      <div class="doc-total-row grand-total"><span class="tl">Grand Total (incl. GST)</span><span class="tv">₹${grand.toFixed(2)}</span></div>
+      <div class="doc-total-row"><span class="tl">${subLabel}</span><span class="tv">₹${subTotal.toFixed(2)}</span></div>
+      ${gstTotals}
+      <div class="doc-total-row grand-total"><span class="tl">${grandLabel}</span><span class="tv">₹${grand.toFixed(2)}</span></div>
     </div>
     <div class="amount-words">${amtWords(grand)}</div>
 
     <div class="doc-terms">
-      <strong>Terms & Conditions:</strong><br>
+      <strong>Terms &amp; Conditions:</strong><br>
       1. This quotation is valid for the period mentioned above.<br>
       2. Prices are subject to change without prior notice after the validity date.<br>
       3. Subject to Chennai Jurisdiction Only.
@@ -646,8 +720,9 @@ function previewQuotation() {
   document.getElementById('quotation-doc').innerHTML = html;
   document.getElementById('quotation-form-section').style.display = 'none';
   document.getElementById('quotation-print-area').style.display   = 'block';
-  showToast('Quotation ready to print!');
+  showToast('Quotation ready — print or download!');
 }
+
 
 // ══════════════════════════════════════════════
 //  UTILITIES
@@ -656,19 +731,57 @@ function previewQuotation() {
 /** Format a YYYY-MM-DD date string to Indian locale (e.g. "04 Apr 2026"). */
 function formatDate(dateStr) {
   if (!dateStr) return '';
-  // FIX: Pass date with time to avoid timezone-shifted date display
   const [y, m, d] = dateStr.split('-').map(Number);
   const date = new Date(y, m - 1, d);
   return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-/** Show a toast notification (type: '' | 'error') */
+/** Show a toast notification (type: '' | 'error' | 'info') */
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
   if (!t) return;
-  t.textContent = (type === 'error' ? '⚠️ ' : '✅ ') + msg;
+  const icon = type === 'error' ? '⚠️' : type === 'info' ? '⏳' : '✅';
+  t.textContent = icon + ' ' + msg;
   t.className   = 'toast' + (type === 'error' ? ' error' : '');
   t.classList.add('show');
   clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ══════════════════════════════════════════════
+//  DOWNLOAD PDF
+// ══════════════════════════════════════════════
+
+/**
+ * Download the current invoice or quotation as a PDF.
+ * Uses html2pdf.js loaded via CDN in index.html.
+ * @param {'invoice'|'quotation'} type
+ */
+function downloadPDF(type) {
+  // Guard: check library is loaded
+  if (typeof html2pdf === 'undefined') {
+    showToast('PDF library not loaded. Please check your internet connection.', 'error');
+    return;
+  }
+
+  const isInvoice = type === 'invoice';
+  const element   = document.getElementById(isInvoice ? 'invoice-doc' : 'quotation-doc');
+  const docNo     = isInvoice
+    ? (document.getElementById('inv-no').value.trim() || 'INVOICE')
+    : (document.getElementById('quo-no').value.trim() || 'QUOTATION');
+  const filename  = `SST-${isInvoice ? 'Invoice' : 'Quotation'}-${docNo}.pdf`;
+
+  const opt = {
+    margin:     [8, 8, 8, 8],
+    filename,
+    image:      { type: 'jpeg', quality: 0.98 },
+    html2canvas:{ scale: 2, useCORS: true, letterRendering: true },
+    jsPDF:      { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak:  { mode: ['css', 'legacy'] },  // respects page-break-after on .print-copy
+  };
+
+  showToast('Generating PDF…', 'info');
+  html2pdf().set(opt).from(element).save()
+    .then(() => showToast(`PDF "${filename}" downloaded!`))
+    .catch(err => { console.error(err); showToast('PDF generation failed.', 'error'); });
 }
