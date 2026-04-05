@@ -18,6 +18,13 @@
 <!-- ══════════════════════════════════════════
      AUTHENTICATION SCREEN
      ══════════════════════════════════════════ -->
+
+<!-- 🌙☀️ Floating theme toggle on auth screen -->
+<button class="theme-toggle auth-theme-toggle" id="auth-theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">
+  <div class="theme-toggle-track"><span>🌙</span><span>☀️</span></div>
+  <div class="theme-toggle-pill" id="theme-pill">🌙</div>
+</button>
+
 <div id="auth-screen" class="auth-screen">
   <div class="auth-box">
     <div class="auth-header">
@@ -137,6 +144,11 @@
   <div class="topbar">
     <div class="topbar-title" id="topbar-title">Dashboard</div>
     <div class="topbar-actions" id="topbar-actions">
+      <!-- 🌙☀️ Theme Toggle -->
+      <button class="theme-toggle" id="topbar-theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">
+        <div class="theme-toggle-track"><span>🌙</span><span>☀️</span></div>
+        <div class="theme-toggle-pill">🌙</div>
+      </button>
       <button class="btn btn-ghost" onclick="resetForm()" title="Clear all fields" style="padding: 10px 18px; font-size: 13px;">🔄 Reset</button>
     </div>
   </div>

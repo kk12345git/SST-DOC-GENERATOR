@@ -45,6 +45,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function initApp() {
   try {
+    // 🌙☀️ Restore theme first (before anything renders)
+    initTheme();
+
     checkAuth();
     loadSettings();
     
@@ -74,6 +77,62 @@ function initApp() {
   } catch (err) {
     console.error("Initialization Error:", err);
   }
+}
+
+// ══════════════════════════════════════════════
+//  🌙☀️ THEME TOGGLE — DARK / LIGHT MODE
+// ══════════════════════════════════════════════
+
+let currentTheme = 'dark'; // default
+
+function initTheme() {
+  const saved = localStorage.getItem('sst_theme_mode') || 'dark';
+  currentTheme = saved;
+  applyTheme(saved, false); // false = no animation on initial load
+}
+
+function toggleTheme() {
+  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  applyTheme(currentTheme, true);
+  localStorage.setItem('sst_theme_mode', currentTheme);
+}
+
+function applyTheme(theme, animate) {
+  const html = document.documentElement;
+
+  // Pause CSS transitions briefly on initial load to avoid flash
+  if (!animate) {
+    html.style.setProperty('--dur', '0s');
+    setTimeout(() => html.style.removeProperty('--dur'), 50);
+  }
+
+  if (theme === 'light') {
+    html.setAttribute('data-theme', 'light');
+  } else {
+    html.removeAttribute('data-theme');
+  }
+
+  // Update all toggle pill emojis and labels
+  updateToggleUI(theme);
+
+  // Re-render charts with matching colors
+  if (typeof renderCharts === 'function') {
+    setTimeout(renderCharts, 350);
+  }
+
+  if (animate) {
+    showToast(theme === 'light' ? '☀️ Switched to Light Mode' : '🌙 Switched to Dark Mode', 'info');
+  }
+}
+
+function updateToggleUI(theme) {
+  const isLight = theme === 'light';
+  const pillEmoji  = isLight ? '☀️' : '🌙';
+
+  // Update all .theme-toggle-pill elements
+  document.querySelectorAll('.theme-toggle-pill').forEach(el => {
+    el.textContent = pillEmoji;
+  });
 }
 
 // ══════════════════════════════════════════════
@@ -797,8 +856,10 @@ function formatDateDMY(s) {
 function showToast(m, t='') {
   const el = document.getElementById('toast');
   if(!el) return;
-  el.textContent = (t==='error'?'❌ ':'✅ ') + m;
-  el.className = 'toast show ' + (t === 'error' ? 'error' : '');
+  const icons = { error: '❌', info: 'ℹ️', success: '✅' };
+  const icon = icons[t] || '✅';
+  el.textContent = icon + ' ' + m;
+  el.className = 'toast show' + (t === 'error' ? ' error' : '') + (t === 'info' ? ' info' : '');
   setTimeout(()=>el.classList.remove('show'), 3000);
 }
 
@@ -989,8 +1050,15 @@ function renderCharts() {
       drData.push(mDr);
     }
 
-    const darkTickColor = '#94a3b8';
-    const darkGridColor = 'rgba(255,255,255,0.05)';
+    // Theme-aware chart colors
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const tickColor  = isLight ? '#4b5683' : '#94a3b8';
+    const gridColor  = isLight ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.05)';
+    const barInflow  = isLight ? 'rgba(99,102,241,0.70)'  : 'rgba(129,140,248,0.75)';
+    const barOutflow = isLight ? 'rgba(244, 63, 94, 0.70)' : 'rgba(251,113,133,0.75)';
+    // keep alias for legend labels
+    const darkTickColor = tickColor;
+    const darkGridColor = gridColor;
 
     if (chartTrend) chartTrend.destroy();
     chartTrend = new Chart(ctxTrend, {
@@ -998,8 +1066,8 @@ function renderCharts() {
       data: {
         labels: months,
         datasets: [
-          { label: 'Inflow (Cr)', data: crData, backgroundColor: 'rgba(129,140,248,0.75)', borderRadius: 6 },
-          { label: 'Outflow (Dr)', data: drData, backgroundColor: 'rgba(251,113,133,0.75)', borderRadius: 6 }
+          { label: 'Inflow (Cr)', data: crData, backgroundColor: barInflow, borderRadius: 6 },
+          { label: 'Outflow (Dr)', data: drData, backgroundColor: barOutflow, borderRadius: 6 }
         ]
       },
       options: {
