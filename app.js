@@ -57,11 +57,12 @@ function initApp() {
 
     // Mobile sidebar toggle
     const toggleBtn = document.getElementById('menu-toggle');
-    const sidebar   = document.querySelector('.sidebar');
+    const sidebar   = document.getElementById('sidebar');
     if (toggleBtn && sidebar) {
-      toggleBtn.addEventListener('click', () => { sidebar.classList.toggle('open'); });
-      document.addEventListener('click', (e) => {
-        if (!sidebar.contains(e.target) && e.target !== toggleBtn) sidebar.classList.remove('open');
+      toggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        const overlay = document.getElementById('sidebar-overlay');
+        if (overlay) overlay.classList.toggle('active', sidebar.classList.contains('open'));
       });
     }
 
@@ -348,6 +349,11 @@ function showPage(page) {
     if (b.dataset.page === page) b.classList.add('active');
   });
 
+  // Sync bottom nav
+  document.querySelectorAll('.bnav-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.page === page);
+  });
+
   currentPage = page;
   const titles = { home:'Dashboard', invoice:'Tax Invoice', quotation:'Quotation', financials:'Financials', settings:'App Settings' };
   document.getElementById('topbar-title').textContent = titles[page] || page;
@@ -356,8 +362,15 @@ function showPage(page) {
   if (page === 'quotation' && quoRowCount === 0) { addQuoRow(); addQuoRow(); addQuoRow(); }
   if (page === 'financials') { refreshFinUI(); }
 
-  document.querySelector('.sidebar')?.classList.remove('open');
+  closeSidebar();
   window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function closeSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (sidebar) sidebar.classList.remove('open');
+  if (overlay) overlay.classList.remove('active');
 }
 
 function backToForm(type) {
@@ -976,11 +989,29 @@ function renderCharts() {
       drData.push(mDr);
     }
 
+    const darkTickColor = '#94a3b8';
+    const darkGridColor = 'rgba(255,255,255,0.05)';
+
     if (chartTrend) chartTrend.destroy();
     chartTrend = new Chart(ctxTrend, {
       type: 'bar',
-      data: { labels: months, datasets: [ { label: 'Inflow (Cr)', data: crData, backgroundColor: '#6366f1' }, { label: 'Outflow (Dr)', data: drData, backgroundColor: '#f43f5e' } ] },
-      options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      data: {
+        labels: months,
+        datasets: [
+          { label: 'Inflow (Cr)', data: crData, backgroundColor: 'rgba(129,140,248,0.75)', borderRadius: 6 },
+          { label: 'Outflow (Dr)', data: drData, backgroundColor: 'rgba(251,113,133,0.75)', borderRadius: 6 }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: darkTickColor, boxWidth: 12, font: { size: 11 } } }
+        },
+        scales: {
+          x: { ticks: { color: darkTickColor }, grid: { color: darkGridColor } },
+          y: { ticks: { color: darkTickColor }, grid: { color: darkGridColor } }
+        }
+      }
     });
 
     const catMap = {};
@@ -988,11 +1019,20 @@ function renderCharts() {
       if (t.entryType === 'Dr') catMap[t.ledger] = (catMap[t.ledger] || 0) + t.total;
     });
 
+    const catColors = ['#818cf8','#34d399','#fbbf24','#fb7185','#a78bfa','#38bdf8','#f97316','#6366f1'];
     if (chartCategory) chartCategory.destroy();
     chartCategory = new Chart(ctxCat, {
       type: 'doughnut',
-      data: { labels: Object.keys(catMap), datasets: [{ data: Object.values(catMap), backgroundColor: ['#6366f1','#10b981','#f59e0b','#f43f5e','#8b5cf6','#06b6d4','#6366f1'] }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+      data: {
+        labels: Object.keys(catMap),
+        datasets: [{ data: Object.values(catMap), backgroundColor: catColors, borderWidth: 0, hoverOffset: 6 }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { color: darkTickColor, boxWidth: 10, font: { size: 10 }, padding: 12 } } },
+        cutout: '65%'
+      }
     });
   } catch (e) {
     console.warn("Chart rendering failed:", e);

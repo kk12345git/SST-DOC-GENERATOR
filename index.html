@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
   <!-- SEO -->
   <title>SST Super Sun Traders – Invoice &amp; Quotation</title>
   <meta name="description" content="SST Super Sun Traders internal pricing app. Generate GST-compliant tax invoices and professional quotations. Chennai.">
   <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#080c18">
 
   <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css">
@@ -15,16 +16,17 @@
 <body>
 
 <!-- ══════════════════════════════════════════
-     AUTHENTICATION SCREEN (NEW)
+     AUTHENTICATION SCREEN
      ══════════════════════════════════════════ -->
 <div id="auth-screen" class="auth-screen">
   <div class="auth-box">
     <div class="auth-header">
+      <div class="logo-ring">🏢</div>
       <div class="logo-text">SST<span>APP</span></div>
       <h2 id="auth-title">Welcome Back</h2>
       <p id="auth-subtitle">Login to manage your business financials</p>
     </div>
-    
+
     <div class="auth-tabs">
       <div id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">LOGIN</div>
       <div id="tab-signup" class="auth-tab" onclick="switchAuthTab('signup')">SIGNUP</div>
@@ -40,12 +42,12 @@
         <label>Password</label>
         <input type="password" id="auth-pass" placeholder="••••••••" required autocomplete="current-password">
       </div>
-      <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;">
-        <span>Sign In</span>
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+        <span>🚀 Sign In</span>
       </button>
     </form>
 
-    <!-- Signup Form (Initially Hidden) -->
+    <!-- Signup Form -->
     <form class="auth-form-el" id="signup-form" onsubmit="handleSignup(event)" style="display: none;">
       <div class="form-group-el">
         <label>Full Name</label>
@@ -59,8 +61,8 @@
         <label>Create Password</label>
         <input type="password" id="reg-pass" placeholder="••••••••" required>
       </div>
-      <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;">
-        <span>Create Account</span>
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+        <span>✨ Create Account</span>
       </button>
     </form>
 
@@ -70,15 +72,16 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     MOBILE MENU TOGGLE
-     ══════════════════════════════════════════ -->
+<!-- Sidebar overlay (mobile) -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- Mobile menu toggle button -->
 <button class="menu-toggle" id="menu-toggle" aria-label="Open navigation menu">☰</button>
 
 <!-- ══════════════════════════════════════════
      SIDEBAR
      ══════════════════════════════════════════ -->
-<aside class="sidebar" aria-label="Primary navigation">
+<aside class="sidebar" id="sidebar" aria-label="Primary navigation">
 
   <div class="sidebar-logo">
     <div class="logo-container" id="sidebar-logo-box">
@@ -108,7 +111,7 @@
     </button>
 
     <div class="nav-label" style="margin-top: 20px;">System</div>
-    
+
     <button class="nav-btn" data-page="settings" onclick="showPage('settings')">
       <span class="icon" aria-hidden="true">⚙️</span> Settings
     </button>
@@ -134,7 +137,7 @@
   <div class="topbar">
     <div class="topbar-title" id="topbar-title">Dashboard</div>
     <div class="topbar-actions" id="topbar-actions">
-      <button class="btn btn-ghost" onclick="resetForm()" title="Clear all fields">🔄 Reset</button>
+      <button class="btn btn-ghost" onclick="resetForm()" title="Clear all fields" style="padding: 10px 18px; font-size: 13px;">🔄 Reset</button>
     </div>
   </div>
 
@@ -186,13 +189,15 @@
 
       <!-- Company Details Card -->
       <div class="company-info-box">
-        <h2>📍 Company Details</h2>
-        <p>
-          <strong>SST SUPER SUN TRADERS</strong><br>
-          #29/23, 8th Street, Dr.Subbaraya Nagar, Kodambakkam, Chennai – 600 024<br>
-          GST: 33BKGPV4919L1ZM &nbsp;|&nbsp; Ph: 044 4218 8202 / 4208 2575<br>
-          Email: supersuntraders@gmail.com
-        </p>
+        <div>
+          <h2>📍 Company Details</h2>
+          <p>
+            <strong>SST SUPER SUN TRADERS</strong><br>
+            #29/23, 8th Street, Dr.Subbaraya Nagar, Kodambakkam, Chennai – 600 024<br>
+            GST: 33BKGPV4919L1ZM &nbsp;|&nbsp; Ph: 044 4218 8202 / 4208 2575<br>
+            Email: supersuntraders@gmail.com
+          </p>
+        </div>
       </div>
 
     </div><!-- /page-home -->
@@ -227,7 +232,7 @@
                 <input type="text" id="inv-mode-payment" placeholder="Cash / Credit 30 days" autocomplete="off">
               </div>
             </div>
-            <div class="form-grid form-grid-4" style="margin-top:10px;">
+            <div class="form-grid form-grid-4" style="margin-top:16px;">
               <div class="form-group">
                 <label for="inv-ref-no">Reference No.</label>
                 <input type="text" id="inv-ref-no" placeholder="Ref No." autocomplete="off">
@@ -245,7 +250,7 @@
                 <input type="date" id="inv-buyer-order-date">
               </div>
             </div>
-            <div class="form-grid form-grid-4" style="margin-top:10px;">
+            <div class="form-grid form-grid-4" style="margin-top:16px;">
               <div class="form-group">
                 <label for="inv-dispatch-doc-no">Dispatch Doc No.</label>
                 <input type="text" id="inv-dispatch-doc-no" placeholder="Dispatch Doc No." autocomplete="off">
@@ -263,7 +268,7 @@
                 <input type="text" id="inv-destination" placeholder="City / address" autocomplete="off">
               </div>
             </div>
-            <div class="form-grid form-grid-4" style="margin-top:10px;">
+            <div class="form-grid form-grid-4" style="margin-top:16px;">
               <div class="form-group">
                 <label for="inv-city-loading">City / Port of Loading</label>
                 <input type="text" id="inv-city-loading" placeholder="Chennai" autocomplete="off">
@@ -281,7 +286,6 @@
           </div>
         </div>
 
-
         <!-- Buyer Details -->
         <div class="form-card">
           <div class="form-card-header">🏥 Buyer Details</div>
@@ -296,7 +300,7 @@
                 <input type="text" id="inv-buyer-gst" placeholder="GST Number" autocomplete="off">
               </div>
             </div>
-            <div class="form-grid form-grid-2" style="margin-top:12px;">
+            <div class="form-grid form-grid-2" style="margin-top:16px;">
               <div class="form-group">
                 <label for="inv-buyer-addr">Address</label>
                 <textarea id="inv-buyer-addr" placeholder="Full address..." autocomplete="street-address"></textarea>
@@ -304,8 +308,8 @@
               <div class="form-group">
                 <label for="inv-buyer-phone">Phone</label>
                 <input type="tel" id="inv-buyer-phone" placeholder="Phone number" autocomplete="tel">
-                <label for="inv-buyer-email" style="margin-top:8px;">Email</label>
-                <input type="email" id="inv-buyer-email" placeholder="Email address" autocomplete="email" style="margin-top:4px;">
+                <label for="inv-buyer-email" style="margin-top:14px;">Email</label>
+                <input type="email" id="inv-buyer-email" placeholder="Email address" autocomplete="email" style="margin-top:8px;">
               </div>
             </div>
           </div>
@@ -315,7 +319,6 @@
         <div class="form-card">
           <div class="form-card-header">
             📦 Items
-            <!-- GST Toggle -->
             <div class="gst-toggle-group">
               <span class="gst-toggle-label">GST:</span>
               <button class="gst-toggle-btn active" id="inv-gst-on"  onclick="setInvGst(true)">With GST</button>
@@ -328,7 +331,7 @@
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th style="text-align:left;min-width:180px;">Description of Goods</th>
+                    <th style="text-align:left;min-width:160px;">Description of Goods</th>
                     <th>HSN/SAC</th>
                     <th>Qty</th>
                     <th>Unit</th>
@@ -376,17 +379,15 @@
 
       </div><!-- /invoice-form-section -->
 
-
       <!-- Print Preview Area -->
       <div class="print-area" id="invoice-print-area">
-        <div style="text-align:right;margin-bottom:16px;" class="no-print">
-          <button class="btn btn-ghost" onclick="backToForm('invoice')" style="margin-right:8px;">← Edit</button>
-          <button class="btn btn-ghost" onclick="downloadPDF('invoice')" style="margin-right:8px;">⬇ Download PDF</button>
+        <div style="text-align:right;margin-bottom:16px;display:flex;gap:10px;justify-content:flex-end;" class="no-print">
+          <button class="btn btn-ghost" onclick="backToForm('invoice')">← Edit</button>
+          <button class="btn btn-ghost" onclick="downloadPDF('invoice')">⬇ Download PDF</button>
           <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
         </div>
         <div id="invoice-doc"></div>
       </div>
-
 
     </div><!-- /page-invoice -->
 
@@ -432,7 +433,7 @@
                 <input type="text" id="quo-contact" placeholder="Contact person name" autocomplete="name">
               </div>
             </div>
-            <div class="form-grid form-grid-3" style="margin-top:12px;">
+            <div class="form-grid form-grid-3" style="margin-top:16px;">
               <div class="form-group">
                 <label for="quo-client-addr">Address</label>
                 <textarea id="quo-client-addr" placeholder="Full address..." autocomplete="street-address"></textarea>
@@ -444,7 +445,7 @@
               <div class="form-group">
                 <label>Client Logo (Optional)</label>
                 <div class="upload-zone" onclick="document.getElementById('quo-client-logo').click()">
-                   <span id="quo-logo-status">Click to upload client logo</span>
+                   <span id="quo-logo-status">📸 Click to upload client logo</span>
                    <input type="file" id="quo-client-logo" hidden accept="image/*" onchange="handleClientLogo(this)">
                    <img id="quo-logo-preview" class="upload-preview">
                 </div>
@@ -457,7 +458,6 @@
         <div class="form-card">
           <div class="form-card-header">
             🛒 Items / Products
-            <!-- GST Toggle -->
             <div class="gst-toggle-group">
               <span class="gst-toggle-label">GST:</span>
               <button class="gst-toggle-btn active" id="quo-gst-on"  onclick="setQuoGst(true)">With GST</button>
@@ -509,17 +509,15 @@
 
       </div><!-- /quotation-form-section -->
 
-
       <!-- Print Preview Area -->
       <div class="print-area" id="quotation-print-area">
-        <div style="text-align:right;margin-bottom:16px;" class="no-print">
-          <button class="btn btn-ghost" onclick="backToForm('quotation')" style="margin-right:8px;">← Edit</button>
-          <button class="btn btn-ghost" onclick="downloadPDF('quotation')" style="margin-right:8px;">⬇ Download PDF</button>
+        <div style="text-align:right;margin-bottom:16px;display:flex;gap:10px;justify-content:flex-end;" class="no-print">
+          <button class="btn btn-ghost" onclick="backToForm('quotation')">← Edit</button>
+          <button class="btn btn-ghost" onclick="downloadPDF('quotation')">⬇ Download PDF</button>
           <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
         </div>
         <div id="quotation-doc"></div>
       </div>
-
 
     </div><!-- /page-quotation -->
 
@@ -527,7 +525,7 @@
          FINANCIALS PAGE
          ────────────────────────────────────── -->
     <div class="page" id="page-financials">
-      
+
       <!-- Financial Tabs -->
       <div class="financial-tabs no-print">
         <button class="f-tab active" onclick="switchFinTab('f-dashboard')">📊 Summary</button>
@@ -562,12 +560,12 @@
           </div>
           <div class="analytics-card">
             <h3>Expense Categories</h3>
-            <canvas id="chartCategory"></canvas>
+            <canvas id="chartCategory" style="max-height:240px;"></canvas>
           </div>
         </div>
       </div>
 
-      <!-- Tab 2: VOUCHER ENTRY (Simply Tally) -->
+      <!-- Tab 2: VOUCHER ENTRY -->
       <div id="f-transactions" class="fin-tab-content">
         <div class="form-card">
           <div class="form-card-header">🏦 New Voucher Entry (Dr/Cr)</div>
@@ -587,12 +585,12 @@
               </div>
               <div class="form-group">
                 <label>Total Amount (Inc. GST)</label>
-                <input type="number" id="fin-amt" placeholder="0.00" step="0.01">
+                <input type="number" id="fin-amt" placeholder="0.00" step="0.01" inputmode="decimal">
               </div>
             </div>
-            
-            <!-- Automated GST Input (Visible only if ledger has (GST) tag) -->
-            <div id="fin-gst-section" style="display:none; margin-top:15px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+
+            <!-- Automated GST Input -->
+            <div id="fin-gst-section" style="display:none; margin-top:15px; padding:16px; border-radius:12px;">
               <div class="form-grid form-grid-2">
                 <div class="form-group">
                   <label>GST Slab (%)</label>
@@ -600,8 +598,8 @@
                     <option value="5">5%</option><option value="12">12%</option><option value="18" selected>18%</option><option value="28">28%</option>
                   </select>
                 </div>
-                <div class="form-text" style="font-size:12px; color:#64748b; align-self:center;">
-                  * System will automatically split Base and Tax for compliance reports.
+                <div style="font-size:12px; color:var(--text-secondary); align-self:center; padding-top:8px;">
+                  * System auto-splits Base and Tax for compliance reports.
                 </div>
               </div>
             </div>
@@ -610,7 +608,7 @@
               <label>Narration / Remarks</label>
               <input type="text" id="fin-desc" placeholder="Enter details of the transaction...">
             </div>
-            <div style="text-align:right;margin-top:15px;">
+            <div style="text-align:right;margin-top:16px;">
               <button class="btn btn-primary" onclick="addFinVoucher()">✅ Record Voucher</button>
             </div>
           </div>
@@ -627,7 +625,7 @@
                   <th style="width:120px">Type</th>
                   <th style="width:60px">Cr/Dr</th>
                   <th class="num" style="width:140px">Total Value</th>
-                  <th style="width:40px"></th>
+                  <th style="width:44px"></th>
                 </tr>
               </thead>
               <tbody id="fin-body"></tbody>
@@ -645,7 +643,7 @@
               <div class="form-group">
                 <label>Report Type</label>
                 <select id="report-type">
-                  <option value="pl">Profit & Loss Account</option>
+                  <option value="pl">Profit &amp; Loss Account</option>
                   <option value="gst">GSTR-1 Compliance Summary</option>
                   <option value="summary">General Cash Flow (Cr/Dr)</option>
                 </select>
@@ -655,15 +653,15 @@
                 <input type="month" id="report-date">
               </div>
               <div class="form-group" style="display:flex;align-items:flex-end;">
-                <button class="btn btn-primary" style="width:100%" onclick="generateComplianceReport()">View Report</button>
+                <button class="btn btn-primary" style="width:100%" onclick="generateComplianceReport()">📊 View Report</button>
               </div>
             </div>
           </div>
         </div>
 
         <div class="print-area" id="financial-print-area" style="display:none;margin-top:20px;">
-          <div style="text-align:right;margin-bottom:16px;" class="no-print">
-            <button class="btn btn-ghost" onclick="downloadPDF('financials')" style="margin-right:8px;">⬇ Download PDF</button>
+          <div style="text-align:right;margin-bottom:16px;display:flex;gap:10px;justify-content:flex-end;" class="no-print">
+            <button class="btn btn-ghost" onclick="downloadPDF('financials')">⬇ Download PDF</button>
             <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
           </div>
           <div id="financial-report-doc"></div>
@@ -678,11 +676,11 @@
     <div class="page" id="page-settings">
       <div class="welcome-header">
         <h1>App Settings ⚙️</h1>
-        <p>Manage your company profile, branding, and account security.</p>
+        <p>Manage your company profile, branding, and interface customization.</p>
       </div>
 
       <div class="settings-grid">
-        
+
         <!-- Branding Card -->
         <div class="form-card">
           <div class="form-card-header">🖼 Company Branding</div>
@@ -691,14 +689,14 @@
               <label>Company Logo</label>
               <div class="upload-zone" id="company-upload-zone" onclick="document.getElementById('company-logo-input').click()">
                 <div id="company-upload-placeholder">
-                  <div style="font-size: 32px; margin-bottom: 10px;">📤</div>
+                  <div style="font-size: 34px; margin-bottom: 10px;">📤</div>
                   <strong>Click to upload your company logo</strong>
-                  <p style="font-size: 12px; color: var(--gray-500); margin-top: 5px;">Recommended: PNG or JPEG (Transparent background)</p>
+                  <p style="font-size: 12px; margin-top: 6px;">Recommended: PNG or JPEG (Transparent background)</p>
                 </div>
                 <input type="file" id="company-logo-input" hidden accept="image/*" onchange="handleCompanyLogo(this)">
                 <img id="company-logo-settings-preview" class="upload-preview" style="display:none; max-width: 100%; max-height: 120px; object-fit: contain;">
               </div>
-              <button class="btn btn-ghost" onclick="removeCompanyLogo()" style="margin-top: 15px; width: 100%; display: none;" id="btn-remove-logo">🗑 Remove Logo</button>
+              <button class="btn btn-ghost" onclick="removeCompanyLogo()" style="margin-top: 14px; width: 100%; display: none;" id="btn-remove-logo">🗑 Remove Logo</button>
             </div>
           </div>
         </div>
@@ -711,19 +709,19 @@
               <label>User Name</label>
               <input type="text" id="settings-user-name" value="SST Super Sun Traders">
             </div>
-            <div class="form-group" style="margin-top: 15px;">
+            <div class="form-group" style="margin-top: 16px;">
               <label>Email Address</label>
               <input type="email" id="settings-user-email" value="admin@sst.com" readonly>
             </div>
             <div style="margin-top: 24px;">
-              <button class="btn btn-primary" onclick="saveSettings()" style="width: 100%; justify-content: center;">💾 Save Changes</button>
+              <button class="btn btn-primary" onclick="saveSettings()" style="width: 100%;">💾 Save Changes</button>
             </div>
           </div>
         </div>
 
-        <!-- Interface Design Card -->
+        <!-- Interface Design Card — spans full row -->
         <div class="form-card" style="grid-column: span 2;">
-          <div class="form-card-header">🎨 Interface Design (UI/UX)</div>
+          <div class="form-card-header">🎨 Interface Design (UI/UX Engine)</div>
           <div class="form-card-body">
             <div class="form-grid form-grid-4">
               <div class="form-group">
@@ -735,17 +733,17 @@
                 <input type="color" id="theme-accent" value="#10b981" oninput="updateThemePreview()">
               </div>
               <div class="form-group">
-                <label>Glass Opacity</label>
-                <input type="range" id="theme-glass-opacity" min="10" max="95" value="70" oninput="updateThemePreview()">
+                <label>Glass Opacity &nbsp;<span id="opacity-val">70</span>%</label>
+                <input type="range" id="theme-glass-opacity" min="10" max="95" value="70" oninput="updateThemePreview(); document.getElementById('opacity-val').textContent=this.value">
               </div>
               <div class="form-group">
-                <label>Corner Radius</label>
-                <input type="range" id="theme-radius" min="0" max="40" value="12" oninput="updateThemePreview()">
+                <label>Corner Radius &nbsp;<span id="radius-val">14</span>px</label>
+                <input type="range" id="theme-radius" min="0" max="40" value="14" oninput="updateThemePreview(); document.getElementById('radius-val').textContent=this.value">
               </div>
             </div>
-            <div style="margin-top: 24px; display: flex; gap: 15px;">
-              <button class="btn btn-primary" onclick="saveTheme()" style="flex: 1; justify-content: center;">💾 Save UI Design</button>
-              <button class="btn btn-ghost" onclick="resetTheme()" style="justify-content: center;">🔄 Reset Defaults</button>
+            <div style="margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap;">
+              <button class="btn btn-primary" onclick="saveTheme()" style="flex: 1; min-width: 160px;">💾 Save UI Design</button>
+              <button class="btn btn-ghost" onclick="resetTheme()" style="min-width: 160px;">🔄 Reset Defaults</button>
             </div>
           </div>
         </div>
@@ -756,16 +754,36 @@
   </div><!-- /content -->
 </main>
 
+<!-- ══════════════════════════════════════════
+     MOBILE BOTTOM NAVIGATION
+     ══════════════════════════════════════════ -->
+<nav class="bottom-nav" id="bottom-nav" aria-label="Mobile navigation">
+  <button class="bnav-btn active" data-page="home" onclick="showPage('home')">
+    <span class="bnav-icon">🏠</span>Home
+  </button>
+  <button class="bnav-btn" data-page="invoice" onclick="showPage('invoice')">
+    <span class="bnav-icon">🧾</span>Invoice
+  </button>
+  <button class="bnav-btn" data-page="quotation" onclick="showPage('quotation')">
+    <span class="bnav-icon">📋</span>Quote
+  </button>
+  <button class="bnav-btn" data-page="financials" onclick="showPage('financials')">
+    <span class="bnav-icon">💰</span>Finance
+  </button>
+  <button class="bnav-btn" data-page="settings" onclick="showPage('settings')">
+    <span class="bnav-icon">⚙️</span>Settings
+  </button>
+</nav>
+
 <!-- Toast Notification -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<!-- Chart.js for Advanced Analytics -->
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- html2pdf.js CDN — enables the Download PDF button -->
+<!-- html2pdf.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <!-- App logic -->
 <script src="app.js"></script>
-
 
 </body>
 </html>
