@@ -1,59 +1,67 @@
 // ══════════════════════════════════════════════
 //  SST SUPER SUN TRADERS – Pricing App Logic
-//  app.js
+//  app.js (Refactored: Simply Tally Edition)
 // ══════════════════════════════════════════════
 
-// ── STATE ──────────────────────────────────────
-let currentPage  = 'home';
-let invRowCount  = 0;
-let quoRowCount  = 0;
-let invGstEnabled = true;   // GST toggle for Invoice
-let quoGstEnabled = true;   // GST toggle for Quotation
+// ── STATE & CONSTANTS ──────────────────────────
+let currentPage   = 'home';
+let invRowCount   = 0;
+let quoRowCount   = 0;
+let invGstEnabled  = true;
+let quoGstEnabled  = true;
 
-// Financial State
+// Simply Tally - Financial State
 let transactions = JSON.parse(localStorage.getItem('sst_transactions') || '[]');
-let chartTrend = null;
+let chartTrend    = null;
 let chartCategory = null;
 
-const FIN_CATEGORIES = {
-  Income: ['Sales (Products)', 'Services', 'Other Income'],
-  Expense: ['Material Purchase', 'Rent & Utilities', 'Salary & Wages', 'Logistics & Courier', 'Marketing & Ads', 'Office Supplies', 'Maintenance', 'Taxes & Fees', 'Others']
+const ACCOUNT_TYPES = {
+  RECEIPT: 'Receipt (Income)',
+  PAYMENT: 'Payment (Expense)',
+  SALES:   'Sales (Voucher)',
+  PURCHASE:'Purchase (Voucher)'
+};
+
+const LEDGER_CATEGORIES = {
+  'Receipt (Income)': ['Sales Revenue', 'Consulting', 'Other Income', 'Capital Infusion'],
+  'Payment (Expense)':['Material Purchase', 'Rent & Electricity', 'Salary & Wages', 'Logistics', 'Marketing', 'Office Expenses', 'Taxes paid', 'General Expenses'],
+  'Sales (Voucher)':['Product Sales (GST)', 'Service Sales (GST)'],
+  'Purchase (Voucher)':['Raw Material (GST)', 'Asset Purchase (GST)']
 };
 
 // ── INITIALISE ON LOAD ──────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('inv-date').value = today;
-  document.getElementById('quo-date').value = today;
+  // Initialization - Ensure elements exist
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const invDate = document.getElementById('inv-date');
+    const quoDate = document.getElementById('quo-date');
+    if (invDate) invDate.value = today;
+    if (quoDate) quoDate.value = today;
 
-  // IMPROVEMENT: mobile sidebar toggle
-  const toggleBtn = document.getElementById('menu-toggle');
-  const sidebar   = document.querySelector('.sidebar');
-  if (toggleBtn && sidebar) {
-    toggleBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('open');
+    // Mobile sidebar toggle
+    const toggleBtn = document.getElementById('menu-toggle');
+    const sidebar   = document.querySelector('.sidebar');
+    if (toggleBtn && sidebar) {
+      toggleBtn.addEventListener('click', () => { sidebar.classList.toggle('open'); });
+      document.addEventListener('click', (e) => {
+        if (!sidebar.contains(e.target) && e.target !== toggleBtn) sidebar.classList.remove('open');
+      });
+    }
+
+    // Keyboard navigation
+    document.querySelectorAll('.dash-card').forEach(card => {
+      card.setAttribute('tabindex', '0');
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); }
+      });
     });
-    // Close sidebar when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!sidebar.contains(e.target) && e.target !== toggleBtn) {
-        sidebar.classList.remove('open');
-      }
-    });
+
+    // Initialize Financials module safely
+    if (typeof initFinancials === 'function') initFinancials();
+  } catch (err) {
+    console.error("Initialization Error:", err);
   }
-
-  // IMPROVEMENT: keyboard navigation
-  document.querySelectorAll('.dash-card').forEach(card => {
-    card.setAttribute('tabindex', '0');
-    card.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        card.click();
-      }
-    });
-  });
-
-  // Initialize Financials
-  initFinancials();
 });
 
 // ══════════════════════════════════════════════
@@ -72,7 +80,7 @@ function showPage(page) {
   });
 
   currentPage = page;
-  const titles = { home: 'Dashboard', invoice: 'Tax Invoice', quotation: 'Quotation', financials: 'Financials' };
+  const titles = { home:'Dashboard', invoice:'Tax Invoice', quotation:'Quotation', financials:'Financials' };
   document.getElementById('topbar-title').textContent = titles[page] || page;
 
   if (page === 'invoice'   && invRowCount === 0) { addInvRow(); addInvRow(); addInvRow(); }
@@ -108,11 +116,11 @@ function resetForm() {
   const today = new Date().toISOString().split('T')[0];
   if (currentPage === 'invoice')   document.getElementById('inv-date').value = today;
   if (currentPage === 'quotation') document.getElementById('quo-date').value = today;
-  showToast('Form has been reset.');
+  showToast('Form reset successful.');
 }
 
 // ══════════════════════════════════════════════
-//  GST TOGGLE
+//  GST & PRICING COMMON LOGIC
 // ══════════════════════════════════════════════
 
 function setInvGst(enabled) {
@@ -142,10 +150,6 @@ function setQuoGst(enabled) {
   if (grandLabel) grandLabel.textContent = enabled ? 'Grand Total (incl. GST)' : 'Total Amount';
   calcQuoTotals();
 }
-
-// ══════════════════════════════════════════════
-//  ROWS & CALCULATION
-// ══════════════════════════════════════════════
 
 function addInvRow() {
   invRowCount++;
@@ -235,10 +239,14 @@ function calcInvTotals() {
     if (aEl) aEl.value = total  > 0 ? total.toFixed(2)  : '';
   });
   const cgst  = totalGst / 2, sgst = totalGst / 2, grand = sub + totalGst;
-  document.getElementById('inv-subtotal').textContent = '₹' + sub.toFixed(2);
-  document.getElementById('inv-cgst').textContent     = '₹' + cgst.toFixed(2);
-  document.getElementById('inv-sgst').textContent     = '₹' + sgst.toFixed(2);
-  document.getElementById('inv-grand').textContent    = '₹' + grand.toFixed(2);
+  const subEl = document.getElementById('inv-subtotal');
+  const cgstEl = document.getElementById('inv-cgst');
+  const sgstEl = document.getElementById('inv-sgst');
+  const grandEl = document.getElementById('inv-grand');
+  if (subEl) subEl.textContent = '₹' + sub.toFixed(2);
+  if (cgstEl) cgstEl.textContent = '₹' + cgst.toFixed(2);
+  if (sgstEl) sgstEl.textContent = '₹' + sgst.toFixed(2);
+  if (grandEl) grandEl.textContent = '₹' + grand.toFixed(2);
 }
 
 function calcQuoTotals() {
@@ -259,155 +267,20 @@ function calcQuoTotals() {
     if (tEl) tEl.value = total  > 0 ? total.toFixed(2)  : '';
   });
   const grand = subTotal + totalGst;
-  document.getElementById('quo-subtotal').textContent = '₹' + subTotal.toFixed(2);
-  document.getElementById('quo-gst').textContent      = '₹' + totalGst.toFixed(2);
-  document.getElementById('quo-grand').textContent    = '₹' + grand.toFixed(2);
+  const subEl = document.getElementById('quo-subtotal');
+  const gstEl = document.getElementById('quo-gst');
+  const grandEl = document.getElementById('quo-grand');
+  if (subEl) subEl.textContent = '₹' + subTotal.toFixed(2);
+  if (gstEl) gstEl.textContent = '₹' + totalGst.toFixed(2);
+  if (grandEl) grandEl.textContent = '₹' + grand.toFixed(2);
 }
 
-// ══════════════════════════════════════════════
-//  DOCUMENT BUILDERS
-// ══════════════════════════════════════════════
-
-function numToWords(n) {
-  const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
-  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
-  if (n === 0) return 'Zero';
-  function hundreds(num) {
-    if (num < 20)  return ones[num];
-    if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 ? ' ' + ones[num % 10] : '');
-    return ones[Math.floor(num / 100)] + ' Hundred' + (num % 100 ? ' ' + hundreds(num % 100) : '');
-  }
-  n = Math.floor(n);
-  let res = '';
-  if (n >= 10000000) { res += hundreds(Math.floor(n / 10000000)) + ' Crore '; n %= 10000000; }
-  if (n >= 100000)   { res += hundreds(Math.floor(n / 100000))   + ' Lakh ';  n %= 100000; }
-  if (n >= 1000)     { res += hundreds(Math.floor(n / 1000))     + ' Thousand '; n %= 1000; }
-  res += hundreds(n);
-  return res.trim();
+// ── UTILS ──────────────────────────────────────
+function formatDateDMY(s) { 
+  if(!s) return ''; 
+  const d = new Date(s); 
+  return isNaN(d.getTime()) ? s : d.toLocaleDateString('en-GB'); 
 }
-function amtWords(val) {
-  const parts = val.toFixed(2).split('.');
-  const words = numToWords(parseInt(parts[0], 10));
-  const paise = parseInt(parts[1], 10);
-  return 'Rupees ' + words + (paise > 0 ? ' and Paise ' + numToWords(paise) : '') + ' Only';
-}
-function esc(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-function buildQuotationDocHTML(data) {
-  const { quoDate, clientName, clientAddr, contact, clientPhone, itemRows, grand, quoGst } = data;
-  const rows = itemRows.map((r, i) => `
-    <tr class="qt-row">
-      <td>${i + 1}</td>
-      <td class="left bold">${esc(r.name)}</td>
-      <td>${esc(r.code)}</td>
-      <td class="num">${r.price.toFixed(2)}</td>
-      ${quoGst ? `<td>${r.gstPct}%</td><td class="num">${r.gstAmt.toFixed(2)}</td>` : '<td>-</td><td class="num">-</td>'}
-      <td class="num">${r.total.toFixed(2)}</td>
-    </tr>`).join('');
-  const pad = Array(Math.max(0, 5-itemRows.length)).fill(0).map(()=>`<tr class="qt-row empty"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('');
-  return `
-  <div class="qt-doc">
-    <div class="qt-header"><div class="qt-logo-block"><div class="qt-logo-circle">SST</div><div><div class="qt-company-name">SUPER SUN TRADERS</div><div class="qt-company-info">#29/23, 8th Street, Dr.Subbaraya Nagar, Chennai - 600 024</div></div></div></div>
-    <div class="qt-title-row"><div class="qt-title-text">QUOTATION</div><div class="qt-date-text">Date : ${quoDate}</div></div>
-    <div class="qt-to-block"><strong>To:</strong> ${esc(clientName)}<br>${esc(contact)}${contact?'<br>':''}${esc(clientAddr).replace(/\n/g,'<br>')}${clientAddr?'<br>':''}${clientPhone?'Ph: '+esc(clientPhone):''}</div>
-    <table class="qt-table"><thead><tr><th>S.NO</th><th>ITEM NO</th><th>PRODUCT CODE</th><th class="num">UNIT PRICE</th><th>GST</th><th>GST AMT</th><th class="num">AMOUNT</th></tr></thead><tbody>${rows}${pad}</tbody><tfoot><tr><td colspan="6" class="right bold">TOTAL</td><td class="num bold">${grand.toFixed(2)}</td></tr></tfoot></table>
-    <div class="qt-footer"><div class="qt-sign-block">Authorised Signatory<br><strong>SUPER SUN TRADERS</strong></div></div>
-  </div>`;
-}
-
-function buildInvoiceDocHTML(data, copyLabel) {
-  const { invNo, invDate, delivNote, modePayment, refNo, refDate, buyerOrderNo, buyerOrderDate, dispatchDocNo, delivNoteDate, dispatchedThrough, destination, buyerName, buyerGst, buyerAddr, termsDelivery, itemRows, grand, gstEnabled } = data;
-  const rows = itemRows.map((r, i) => `
-    <tr class="inv-item-row"><td rowspan="2" class="inv-sno">${i+1}</td><td class="inv-desc-cell">${esc(r.desc)}</td><td class="center">${esc(r.hsn)}</td><td class="num">${r.qty} ${esc(r.unit)}</td><td class="num">${r.rate.toFixed(2)}</td><td class="center">${esc(r.unit)}</td><td class="num">${r.base.toFixed(2)}</td></tr>
-    <tr class="inv-sub-row"><td colspan="6" class="inv-sub-info">Batch: ${esc(r.batch)} &nbsp; Mfg: ${esc(r.mfgDt)} &nbsp; Exp: ${esc(r.expiry)}</td></tr>`).join('');
-  let taxRows = '';
-  if (gstEnabled) {
-    const m = {}; itemRows.forEach(r => { const k = r.gstPct.toFixed(1); if(!m[k])m[k]=0; m[k]+=r.gstAmt; });
-    Object.entries(m).forEach(([p, a]) => {
-      taxRows += `<tr class="inv-tax-row"><td colspan="5" class="right italic">OUTPUT CGST @ ${(p/2).toFixed(1)}%</td><td class="center">${(p/2).toFixed(1)}%</td><td class="num">${(a/2).toFixed(2)}</td></tr>`;
-      taxRows += `<tr class="inv-tax-row"><td colspan="5" class="right italic">OUTPUT SGST @ ${(p/2).toFixed(1)}%</td><td class="center">${(p/2).toFixed(1)}%</td><td class="num">${(a/2).toFixed(2)}</td></tr>`;
-    });
-  }
-  return `
-  <div class="inv-doc">
-    <div class="inv-title-row"><div class="inv-title">TAX INVOICE</div><div class="inv-copy-badge">${esc(copyLabel)}</div></div>
-    <div class="inv-top-grid">
-      <div class="inv-company-block"><strong>SST SUPER SUN TRADERS</strong><br>#29/23, 8th Street, Dr.Subbaraya Nagar, Kodambakkam, Chennai<br>GSTIN: 33BKGPV4919L1ZM</div>
-      <div class="inv-fields-grid">
-        <div class="inv-field-label">Inv No & Date</div><div class="inv-field-val">${esc(invNo)} / ${invDate}</div>
-        <div class="inv-field-label">Delivery Note</div><div class="inv-field-val">${esc(delivNote)}</div>
-        <div class="inv-field-label">Payment</div><div class="inv-field-val">${esc(modePayment)}</div>
-        <div class="inv-field-label">Buyer Order</div><div class="inv-field-val">${esc(buyerOrderNo)} / ${formatDateDMY(buyerOrderDate)}</div>
-        <div class="inv-field-label">Destination</div><div class="inv-field-val">${esc(destination)} via ${esc(dispatchedThrough)}</div>
-      </div>
-    </div>
-    <div class="inv-buyer-block"><strong>Buyer:</strong> ${esc(buyerName)}<br>${esc(buyerAddr).replace(/\n/g,'<br>')}<br>GST: ${esc(buyerGst)}</div>
-    <table class="inv-table"><thead><tr><th>SI</th><th>Description</th><th>HSN</th><th>Qty</th><th>Rate</th><th>per</th><th>Amount</th></tr></thead><tbody>${rows}</tbody><tfoot>${taxRows}<tr class="inv-grand-row"><td colspan="6" class="right bold">TOTAL</td><td class="num bold">${grand.toFixed(2)}</td></tr></tfoot></table>
-    <div class="inv-bottom-row"><div><strong>${amtWords(grand)}</strong></div><div class="inv-for-block">for SST SUPER SUN TRADERS<br><br>Authorised Signatory</div></div>
-  </div>`;
-}
-
-function previewInvoice() {
-  const data = {
-    invNo: document.getElementById('inv-no').value, invDate: formatDateDMY(document.getElementById('inv-date').value),
-    delivNote: document.getElementById('inv-delivery-note').value, modePayment: document.getElementById('inv-mode-payment').value,
-    refNo: document.getElementById('inv-ref-no').value, refDate: document.getElementById('inv-ref-date').value,
-    buyerOrderNo: document.getElementById('inv-buyer-order-no').value, buyerOrderDate: document.getElementById('inv-buyer-order-date').value,
-    dispatchDocNo: document.getElementById('inv-dispatch-doc-no').value, delivNoteDate: document.getElementById('inv-deliv-note-date').value,
-    dispatchedThrough: document.getElementById('inv-dispatched-through').value, destination: document.getElementById('inv-destination').value,
-    buyerName: document.getElementById('inv-buyer-name').value, buyerGst: document.getElementById('inv-buyer-gst').value,
-    buyerAddr: document.getElementById('inv-buyer-addr').value, termsDelivery: document.getElementById('inv-terms-delivery').value,
-    itemRows: [], sub: 0, grand: 0, gstEnabled: invGstEnabled
-  };
-  let tGst = 0;
-  document.querySelectorAll('#inv-items-body tr').forEach(row => {
-    const ins = row.querySelectorAll('input');
-    const desc = ins[0]?.value, qty = parseFloat(ins[2]?.value)||0, rate = parseFloat(ins[4]?.value)||0, pct = parseFloat(row.querySelector('select')?.value)||0;
-    if(!desc && qty===0) return;
-    const b = qty*rate, g = invGstEnabled ? (b*pct/100) : 0;
-    data.sub += b; tGst += g;
-    data.itemRows.push({ desc, hsn: ins[1]?.value, qty, unit: ins[3]?.value, rate, gstPct: pct, gstAmt: g, base: b, total: b+g, batch: ins[5]?.value, mfgDt: ins[6]?.value, expiry: ins[7]?.value });
-  });
-  if(data.itemRows.length===0){ showToast('Add items!','error'); return; }
-  data.grand = data.sub + tGst;
-  let html = '';
-  ['Original','Duplicate','Office Copy'].forEach((l,i) => {
-    html += `<div class="print-copy ${i===2?'print-copy--last':''}">` + buildInvoiceDocHTML(data, l) + `</div>`;
-  });
-  document.getElementById('invoice-doc').innerHTML = html;
-  document.getElementById('invoice-form-section').style.display = 'none';
-  document.getElementById('invoice-print-area').style.display   = 'block';
-  showToast('Invoices ready!');
-}
-
-function previewQuotation() {
-  const data = {
-    quoDate: formatDateDMY(document.getElementById('quo-date').value),
-    clientName: document.getElementById('quo-client-name').value,
-    contact: document.getElementById('quo-contact').value,
-    clientAddr: document.getElementById('quo-client-addr').value,
-    clientPhone: document.getElementById('quo-client-phone').value,
-    itemRows: [], grand: 0, quoGst: quoGstEnabled
-  };
-  document.querySelectorAll('#quo-items-body tr').forEach(row => {
-    const ins = row.querySelectorAll('input');
-    const name = ins[0]?.value, price = parseFloat(ins[2]?.value)||0, pct = parseFloat(row.querySelector('select')?.value)||0;
-    if(!name && price===0) return;
-    const g = quoGstEnabled ? (price*pct/100) : 0;
-    data.grand += (price + g);
-    data.itemRows.push({ name, code: ins[1]?.value, price, gstPct: pct, gstAmt: g, total: price+g });
-  });
-  if(data.itemRows.length===0){ showToast('Add items!','error'); return; }
-  document.getElementById('quotation-doc').innerHTML = buildQuotationDocHTML(data);
-  document.getElementById('quotation-form-section').style.display = 'none';
-  document.getElementById('quotation-print-area').style.display   = 'block';
-  showToast('Quotation ready!');
-}
-
-function formatDateDMY(s) { if(!s) return ''; const d = new Date(s); return isNaN(d.getTime()) ? s : d.toLocaleDateString('en-GB'); }
 
 function showToast(m, t='') {
   const el = document.getElementById('toast');
@@ -417,101 +290,161 @@ function showToast(m, t='') {
   setTimeout(()=>el.classList.remove('show'), 3000);
 }
 
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function amtWords(val) {
+  const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  function hundreds(num) {
+    if (num < 20)  return ones[num];
+    if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 ? ' ' + ones[num % 10] : '');
+    return ones[Math.floor(num / 100)] + ' Hundred' + (num % 100 ? ' ' + hundreds(num % 100) : '');
+  }
+  const parts = val.toFixed(2).split('.');
+  let n = parseInt(parts[0], 10);
+  if (n === 0) return 'Rupees Zero Only';
+  let res = '';
+  if (n >= 10000000) { res += hundreds(Math.floor(n / 10000000)) + ' Crore '; n %= 10000000; }
+  if (n >= 100000)   { res += hundreds(Math.floor(n / 100000))   + ' Lakh ';  n %= 100000; }
+  if (n >= 1000)     { res += hundreds(Math.floor(n / 1000))     + ' Thousand '; n %= 1000; }
+  res += hundreds(n);
+  const paise = parseInt(parts[1], 10);
+  return 'Rupees ' + res.trim() + (paise > 0 ? ' and Paise ' + hundreds(paise) : '') + ' Only';
+}
+
 function downloadPDF(type) {
-  const el = document.getElementById(type==='invoice'?'invoice-doc':'quotation-doc');
-  const opt = { margin: 5, filename: `SST_${type}_${Date.now()}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: 'css' } };
+  const pages = { invoice: 'invoice-doc', quotation: 'quotation-doc', financials: 'financial-report-doc' };
+  const el = document.getElementById(pages[type]);
+  if (!el) { showToast('Nothing to download!', 'error'); return; }
+  const opt = { margin: 5, filename: `SST_${type}_${Date.now()}.pdf`, precision: 2, image: { type:'jpeg', quality:0.98 }, html2canvas: { scale:2, useCORS: true }, jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }, pagebreak: { mode: 'css' } };
   showToast('Generating PDF...');
   html2pdf().set(opt).from(el).save();
 }
 
 // ══════════════════════════════════════════════
-//  FINANCIALS LOGIC
+//  SIMPLY TALLY – FINANCIALS MODULE
 // ══════════════════════════════════════════════
 
 function initFinancials() {
   const fDate = document.getElementById('fin-date');
   if (fDate) fDate.value = new Date().toISOString().split('T')[0];
   const rDate = document.getElementById('report-date');
-  if (rDate) rDate.value = new Date().toISOString().substring(0, 7); // YYYY-MM
-  updateFinCategories();
+  if (rDate) rDate.value = new Date().toISOString().substring(0, 7); 
+  
+  // Fill Voucher Types
+  const typeSel = document.getElementById('fin-type');
+  if (typeSel) {
+    typeSel.innerHTML = Object.entries(ACCOUNT_TYPES).map(([k, v]) => `<option value="${v}">${v}</option>`).join('');
+    updateFinLedgers();
+  }
+  
   refreshFinUI();
 }
 
 function switchFinTab(tabId) {
   document.querySelectorAll('.fin-tab-content').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.f-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById(tabId).classList.add('active');
-  
-  // Update active tab button visually
-  const btns = document.querySelectorAll('.f-tab');
-  btns.forEach(btn => {
-    if (btn.getAttribute('onclick')?.includes(tabId)) {
-      btn.classList.add('active');
-    }
-  });
+  document.getElementById(tabId)?.classList.add('active');
+  const activeBtn = Array.from(document.querySelectorAll('.f-tab')).find(b => b.getAttribute('onclick').includes(tabId));
+  if (activeBtn) activeBtn.classList.add('active');
 
   if (tabId === 'f-dashboard') renderCharts();
 }
 
-function updateFinCategories() {
+function updateFinLedgers() {
   const type = document.getElementById('fin-type').value;
-  const catSel = document.getElementById('fin-category');
-  if (!catSel) return;
-  catSel.innerHTML = FIN_CATEGORIES[type].map(c => `<option value="${c}">${c}</option>`).join('');
+  const ledgerSel = document.getElementById('fin-ledger');
+  if (!ledgerSel) return;
+  ledgerSel.innerHTML = (LEDGER_CATEGORIES[type] || []).map(c => `<option value="${c}">${c}</option>`).join('');
 }
 
-function addFinTransaction() {
+function toggleGstInput() {
+  const ledger = document.getElementById('fin-ledger').value;
+  const gstSec = document.getElementById('fin-gst-section');
+  if (gstSec) gstSec.style.display = ledger.toLowerCase().includes('(gst)') ? 'block' : 'none';
+}
+
+function addFinVoucher() {
   const date = document.getElementById('fin-date').value;
-  const type = document.getElementById('fin-type').value;
-  const cat  = document.getElementById('fin-category').value;
-  const amt  = parseFloat(document.getElementById('fin-amt').value) || 0;
-  const desc = document.getElementById('fin-desc').value;
+  const type = document.getElementById('fin-type').value; // Receipt, Payment, vs
+  const ledger = document.getElementById('fin-ledger').value;
+  const totalAmt = parseFloat(document.getElementById('fin-amt').value) || 0;
+  const nar = document.getElementById('fin-desc').value;
+  const gstPct = parseFloat(document.getElementById('fin-gst-pct')?.value) || 0;
 
-  if (amt <= 0 || !date || !desc) { showToast('Please fill all required fields.', 'error'); return; }
+  if (totalAmt <= 0 || !date) { showToast('Amount and Date are required.', 'error'); return; }
 
-  const newItem = { id: Date.now(), date, type, category: cat, amount: amt, desc };
-  transactions.push(newItem);
+  // Compliance Logic: Automated GST split
+  let baseAmt = totalAmt;
+  let taxAmt = 0;
+  if (ledger.toLowerCase().includes('(gst)')) {
+    baseAmt = totalAmt / (1 + (gstPct/100));
+    taxAmt  = totalAmt - baseAmt;
+  }
+
+  const voucher = {
+    id: Date.now(),
+    date,
+    type,
+    ledger,
+    total: totalAmt,
+    base: baseAmt,
+    tax: taxAmt,
+    taxPct: gstPct,
+    narration: nar,
+    entryType: (type.includes('Receipt') || type.includes('Sales')) ? 'Cr' : 'Dr'
+  };
+
+  transactions.push(voucher);
   localStorage.setItem('sst_transactions', JSON.stringify(transactions));
   
+  // Clear form
   document.getElementById('fin-amt').value = '';
   document.getElementById('fin-desc').value = '';
   refreshFinUI();
-  showToast('Transaction added successfully!');
+  showToast('Voucher entry successful!');
 }
 
-function deleteFinTransaction(id) {
-  if (!confirm('Delete this transaction?')) return;
+function deleteFinVoucher(id) {
+  if (!confirm('Delete this voucher?')) return;
   transactions = transactions.filter(t => t.id !== id);
   localStorage.setItem('sst_transactions', JSON.stringify(transactions));
   refreshFinUI();
 }
 
 function refreshFinUI() {
-  // Update Table
   const tbody = document.getElementById('fin-body');
   if (!tbody) return;
+
   const sorted = [...transactions].sort((a,b) => new Date(b.date) - new Date(a.date));
   tbody.innerHTML = sorted.map(t => `
     <tr>
       <td>${formatDateDMY(t.date)}</td>
-      <td class="left">${esc(t.desc)}</td>
-      <td><span class="badge" style="background:#f1f5f9;padding:4px 8px;border-radius:4px;font-size:11px;">${t.category}</span></td>
-      <td><span style="font-weight:700;color:${t.type==='Expense'?'#dc2626':'#059669'}">${t.type}</span></td>
-      <td class="num bold" style="color:${t.type==='Expense'?'#dc2626':'#059669'}">${t.type==='Expense'?'-':'+'} ₹${t.amount.toFixed(2)}</td>
-      <td><button class="del-row" onclick="deleteFinTransaction(${t.id})">✕</button></td>
+      <td class="left"><strong>${t.ledger}</strong><br><small style="color:#64748b">${t.narration}</small></td>
+      <td><span class="badge ${t.entryType==='Cr'?'success':'danger'}">${t.type.split(' ')[0]}</span></td>
+      <td style="font-weight:700; color:${t.entryType==='Dr'?'#dc2626':'#059669'}">${t.entryType}</td>
+      <td class="num bold">₹${t.total.toFixed(2)}</td>
+      <td><button class="del-row" onclick="deleteFinVoucher(${t.id})">✕</button></td>
     </tr>
   `).join('');
 
   // Update Summary
-  let inc = 0, exp = 0;
-  transactions.forEach(t => { if(t.type==='Income') inc += t.amount; else exp += t.amount; });
+  let totalRec = 0, totalPay = 0;
+  transactions.forEach(t => {
+    if (t.entryType === 'Cr') totalRec += t.total;
+    else totalPay += t.total;
+  });
+
   const incEl = document.getElementById('fin-total-income');
   const expEl = document.getElementById('fin-total-expense');
   const balEl = document.getElementById('fin-net-balance');
   
-  if (incEl) incEl.textContent = '₹' + inc.toLocaleString('en-IN', {minimumFractionDigits:2});
-  if (expEl) expEl.textContent = '₹' + exp.toLocaleString('en-IN', {minimumFractionDigits:2});
-  if (balEl) balEl.textContent = '₹' + (inc-exp).toLocaleString('en-IN', {minimumFractionDigits:2});
+  if (incEl) incEl.textContent = '₹' + totalRec.toLocaleString('en-IN', {minimumFractionDigits:2});
+  if (expEl) expEl.textContent = '₹' + totalPay.toLocaleString('en-IN', {minimumFractionDigits:2});
+  if (balEl) balEl.textContent = '₹' + (totalRec - totalPay).toLocaleString('en-IN', {minimumFractionDigits:2});
   
   if (document.getElementById('f-dashboard')?.classList.contains('active')) renderCharts();
 }
@@ -519,134 +452,147 @@ function refreshFinUI() {
 function renderCharts() {
   const trendEl = document.getElementById('chartTrend');
   const catEl   = document.getElementById('chartCategory');
-  if (!trendEl || !catEl) return;
+  if (!trendEl || !catEl || typeof Chart === 'undefined') return;
   
-  const ctxTrend = trendEl.getContext('2d');
-  const ctxCat   = catEl.getContext('2d');
+  try {
+    const ctxTrend = trendEl.getContext('2d');
+    const ctxCat   = catEl.getContext('2d');
 
-  // Trend Data (Last 6 Months)
-  const months = [];
-  const incomeData = [];
-  const expenseData = [];
-  const now = new Date();
-  
-  for (let i = 5; i >= 0; i--) {
-    let d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const mLabel = d.toLocaleString('default', { month: 'short' });
-    months.push(mLabel);
+    const months = [];
+    const crData = []; // Credit (Income)
+    const drData = []; // Debit (Expense)
+    const now = new Date();
     
-    let mInc = 0, mExp = 0;
-    transactions.forEach(t => {
-      let td = new Date(t.date);
-      if (td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear()) {
-        if (t.type === 'Income') mInc += t.amount; else mExp += t.amount;
-      }
+    for (let i = 5; i >= 0; i--) {
+      let d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(d.toLocaleString('default', { month: 'short' }));
+      let mCr = 0, mDr = 0;
+      transactions.forEach(t => {
+        let td = new Date(t.date);
+        if (td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear()) {
+          if (t.entryType === 'Cr') mCr += t.total; else mDr += t.total;
+        }
+      });
+      crData.push(mCr);
+      drData.push(mDr);
+    }
+
+    if (chartTrend) chartTrend.destroy();
+    chartTrend = new Chart(ctxTrend, {
+      type: 'bar',
+      data: { labels: months, datasets: [ { label: 'Inflow (Cr)', data: crData, backgroundColor: '#10b981' }, { label: 'Outflow (Dr)', data: drData, backgroundColor: '#ef4444' } ] },
+      options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
     });
-    incomeData.push(mInc);
-    expenseData.push(mExp);
+
+    const catMap = {};
+    transactions.forEach(t => {
+      if (t.entryType === 'Dr') catMap[t.ledger] = (catMap[t.ledger] || 0) + t.total;
+    });
+
+    if (chartCategory) chartCategory.destroy();
+    chartCategory = new Chart(ctxCat, {
+      type: 'doughnut',
+      data: { labels: Object.keys(catMap), datasets: [{ data: Object.values(catMap), backgroundColor: ['#3b82f6','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#10b981','#6366f1'] }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+    });
+  } catch (e) {
+    console.warn("Chart rendering failed:", e);
   }
-
-  if (chartTrend) chartTrend.destroy();
-  chartTrend = new Chart(ctxTrend, {
-    type: 'bar',
-    data: {
-      labels: months,
-      datasets: [
-        { label: 'Income', data: incomeData, backgroundColor: '#10b981' },
-        { label: 'Expense', data: expenseData, backgroundColor: '#ef4444' }
-      ]
-    },
-    options: { responsive: true, plugins: { legend: { position: 'top' } } }
-  });
-
-  // Category Data
-  const catMap = {};
-  transactions.filter(t => t.type === 'Expense').forEach(t => {
-    catMap[t.category] = (catMap[t.category] || 0) + t.amount;
-  });
-
-  if (chartCategory) chartCategory.destroy();
-  chartCategory = new Chart(ctxCat, {
-    type: 'doughnut',
-    data: {
-      labels: Object.keys(catMap),
-      datasets: [{ data: Object.values(catMap), backgroundColor: ['#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f43f5e', '#6366f1', '#64748b'] }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
 }
 
-function previewFinancialReport() {
-  const period = document.getElementById('report-period').value;
-  const rawDate = document.getElementById('report-date').value;
-  if (!rawDate) { showToast('Please select a date/period.', 'error'); return; }
+// ── COMPLIANCE REPORTING ──────────────────────────
+function generateComplianceReport() {
+  const type = document.getElementById('report-type').value;
+  const dateStr = document.getElementById('report-date').value;
+  if (!dateStr) { showToast('Select month/year.', 'error'); return; }
 
-  const selDate = new Date(rawDate);
-  let filtered = [];
-  let title = `${period} Financial Report`;
+  const selYear = parseInt(dateStr.split('-')[0]), selMonth = parseInt(dateStr.split('-')[1]) - 1;
+  const filtered = transactions.filter(t => {
+    const d = new Date(t.date);
+    return d.getFullYear() === selYear && d.getMonth() === selMonth;
+  });
 
-  // Filter logic
-  if (period === 'Daily') {
-    filtered = transactions.filter(t => t.date === rawDate);
-    title += ` for ${formatDateDMY(rawDate)}`;
-  } else if (period === 'Monthly') {
-    filtered = transactions.filter(t => t.date.substring(0, 7) === rawDate.substring(0, 7));
-    title += ` for ${selDate.toLocaleString('default', { month: 'long', year: 'numeric' })}`;
-  } else if (period === 'Quarterly') {
-    const q = Math.floor(selDate.getMonth() / 3) + 1;
-    filtered = transactions.filter(t => {
-      const d = new Date(t.date);
-      return d.getFullYear() === selDate.getFullYear() && (Math.floor(d.getMonth()/3)+1) === q;
-    });
-    title += ` for Q${q} ${selDate.getFullYear()}`;
-  } else if (period === 'Half-Yearly') {
-    const h = selDate.getMonth() < 6 ? 1 : 2;
-    filtered = transactions.filter(t => {
-      const d = new Date(t.date);
-      const th = d.getMonth() < 6 ? 1 : 2;
-      return d.getFullYear() === selDate.getFullYear() && th === h;
-    });
-    title += ` for H${h} ${selDate.getFullYear()}`;
-  } else if (period === 'Annually') {
-    filtered = transactions.filter(t => new Date(t.date).getFullYear() === selDate.getFullYear());
-    title += ` for Year ${selDate.getFullYear()}`;
-  }
+  if (filtered.length === 0) { showToast('No data for this period.', 'error'); return; }
 
-  if (filtered.length === 0) { showToast('No data for selected period.', 'error'); return; }
+  let html = '';
+  if (type === 'gst') html = buildGstCompliance(filtered, dateStr);
+  else if (type === 'pl') html = buildProfitLoss(filtered, dateStr);
+  else html = buildGeneralReport(filtered, dateStr);
 
-  let inc = 0, exp = 0;
-  filtered.forEach(t => { if(t.type==='Income') inc += t.amount; else exp += t.amount; });
-
-  const html = `
-    <div class="rep-doc">
-      <div class="rep-header">
-        <div class="rep-title">SST SUPER SUN TRADERS</div>
-        <div class="rep-meta">${title}</div>
-      </div>
-      <div class="rep-summary-grid">
-        <div class="rep-sum-card"><div class="rep-sum-label">Total Income</div><div class="rep-sum-val" style="color:#059669">₹${inc.toFixed(2)}</div></div>
-        <div class="rep-sum-card"><div class="rep-sum-label">Total Expenses</div><div class="rep-sum-val" style="color:#dc2626">₹${exp.toFixed(2)}</div></div>
-        <div class="rep-sum-card"><div class="rep-sum-label">Net Balance</div><div class="rep-sum-val" style="color:#2563eb">₹${(inc-exp).toFixed(2)}</div></div>
-      </div>
-      <table class="rep-table">
-        <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Type</th><th class="num">Amount (₹)</th></tr></thead>
-        <tbody>
-          ${filtered.sort((a,b)=>new Date(a.date)-new Date(b.date)).map(t => `
-            <tr><td>${formatDateDMY(t.date)}</td><td>${esc(t.desc)}</td><td>${t.category}</td><td>${t.type}</td><td class="num">${t.amount.toFixed(2)}</td></tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
   document.getElementById('financial-report-doc').innerHTML = html;
   document.getElementById('financial-print-area').style.display = 'block';
-  showToast('Report generated!');
+  showToast('Compliance report generated!');
 }
 
-function downloadFinancialReport() {
-  const el = document.getElementById('financial-report-doc');
-  if (!el) return;
-  const opt = { margin: 10, filename: `SST_Report_${Date.now()}.pdf`, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-  showToast('Generating PDF...');
-  html2pdf().set(opt).from(el).save();
+function buildGstCompliance(data, period) {
+  let outputTax = 0, inputTax = 0, taxableSales = 0, taxablePurchases = 0;
+  data.forEach(t => {
+    if (t.ledger.toLowerCase().includes('sales')) { taxableSales += t.base; outputTax += t.tax; }
+    if (t.ledger.toLowerCase().includes('purchase')) { taxablePurchases += t.base; inputTax += t.tax; }
+  });
+
+  return `
+    <div class="rep-doc">
+      <div class="rep-header"><div class="rep-title">GSTR-1 COMPLIANCE SUMMARY</div><div class="rep-meta">Period: ${period}</div></div>
+      <div class="rep-summary-grid">
+        <div class="rep-sum-card thin"><div class="rep-sum-label">Taxable Sales</div><div class="rep-sum-val">₹${taxableSales.toFixed(2)}</div></div>
+        <div class="rep-sum-card thin"><div class="rep-sum-label">Output GST (Liability)</div><div class="rep-sum-val danger">₹${outputTax.toFixed(2)}</div></div>
+        <div class="rep-sum-card thin"><div class="rep-sum-label">Input Tax Credit</div><div class="rep-sum-val success">₹${inputTax.toFixed(2)}</div></div>
+      </div>
+      <table class="rep-table">
+        <thead><tr><th>Date</th><th>Particulars</th><th>HSN/Category</th><th>Taxable Val</th><th>GST Amt</th><th class="num">Total</th></tr></thead>
+        <tbody>
+          ${data.filter(t => t.tax > 0).map(t => `<tr><td>${formatDateDMY(t.date)}</td><td>${t.narration}</td><td>${t.ledger}</td><td>₹${t.base.toFixed(2)}</td><td>₹${t.tax.toFixed(2)}</td><td class="num">₹${t.total.toFixed(2)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      <div style="margin-top:20px; text-align:right; border-top:2px solid #eee; padding-top:10px;">
+        <strong>Net GST Payable: ₹${Math.max(0, outputTax - inputTax).toFixed(2)}</strong>
+      </div>
+    </div>`;
+}
+
+function buildProfitLoss(data, period) {
+  let income = 0, directExp = 0, indirectExp = 0;
+  data.forEach(t => {
+    if (t.entryType === 'Cr') income += t.base;
+    else {
+      if (t.ledger.includes('Material')) directExp += t.base;
+      else indirectExp += t.base;
+    }
+  });
+
+  const grossProfit = income - directExp;
+  const netProfit   = grossProfit - indirectExp;
+
+  return `
+    <div class="rep-doc">
+      <div class="rep-header"><div class="rep-title">PROFIT & LOSS ACCOUNT (UNAUDITED)</div><div class="rep-meta">Period: ${period}</div></div>
+      <table class="rep-table ledger-table">
+        <thead><tr><th>Particulars</th><th class="num">Debit (Dr)</th><th class="num">Credit (Cr)</th></tr></thead>
+        <tbody>
+          <tr><td>Sales Revenue (Net of Tax)</td><td></td><td class="num">₹${income.toFixed(2)}</td></tr>
+          <tr><td>Cost of Goods Sold (Direct)</td><td class="num">₹${directExp.toFixed(2)}</td><td></td></tr>
+          <tr class="subtotal-row"><td><strong>GROSS PROFIT</strong></td><td></td><td class="num"><strong>₹${grossProfit.toFixed(2)}</strong></td></tr>
+          <tr><td>Indirect Expenses (Logistics, Rent, etc)</td><td class="num">₹${indirectExp.toFixed(2)}</td><td></td></tr>
+          <tr class="grand-total-row"><td><strong>NET PROFIT / LOSS</strong></td><td></td><td class="num" style="color:${netProfit>=0?'#059669':'#dc2626'}"><strong>₹${netProfit.toFixed(2)}</strong></td></tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function buildGeneralReport(filtered, period) {
+  let inc = 0, exp = 0; filtered.forEach(t => { if(t.entryType==='Cr') inc += t.total; else exp += t.total; });
+  return `
+    <div class="rep-doc">
+      <div class="rep-header"><div class="rep-title">FINANCIAL SUMMARY</div><div class="rep-meta">Period: ${period}</div></div>
+      <div class="rep-summary-grid">
+        <div class="rep-sum-card"><div class="rep-sum-label">Total Inflow (Cr)</div><div class="rep-sum-val success">₹${inc.toFixed(2)}</div></div>
+        <div class="rep-sum-card"><div class="rep-sum-label">Total Outflow (Dr)</div><div class="rep-sum-val danger">₹${exp.toFixed(2)}</div></div>
+        <div class="rep-sum-card"><div class="rep-sum-label">Net Surplus</div><div class="rep-sum-val primary">₹${(inc-exp).toFixed(2)}</div></div>
+      </div>
+      <table class="rep-table">
+        <thead><tr><th>Date</th><th>Ledger</th><th>Type</th><th class="num">Amount (₹)</th></tr></thead>
+        <tbody>${filtered.map(t => `<tr><td>${formatDateDMY(t.date)}</td><td>${t.ledger}</td><td>${t.entryType}</td><td class="num">₹${t.total.toFixed(2)}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>`;
 }
