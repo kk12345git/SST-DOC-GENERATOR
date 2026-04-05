@@ -43,6 +43,10 @@
     <button class="nav-btn" data-page="quotation" onclick="showPage('quotation')">
       <span class="icon" aria-hidden="true">📋</span> Quotation
     </button>
+
+    <button class="nav-btn" data-page="financials" onclick="showPage('financials')">
+      <span class="icon" aria-hidden="true">💰</span> Financials
+    </button>
   </nav>
 
   <div class="sidebar-footer">
@@ -97,6 +101,16 @@
             GST amounts. Send to clients instantly.
           </div>
           <div class="dash-card-arrow" aria-hidden="true">→ Create Quotation</div>
+        </div>
+
+        <div class="dash-card" onclick="showPage('financials')" role="button" aria-label="Financial Analytics">
+          <div class="dash-icon" aria-hidden="true">💰</div>
+          <div class="dash-card-title">Financials</div>
+          <div class="dash-card-desc">
+            Track income and expenses, view advanced analytics, and
+            generate periodic financial reports.
+          </div>
+          <div class="dash-card-arrow" aria-hidden="true">→ Manage Finance</div>
         </div>
 
       </div>
@@ -432,12 +446,152 @@
 
     </div><!-- /page-quotation -->
 
+    <!-- ──────────────────────────────────────
+         FINANCIALS PAGE
+         ────────────────────────────────────── -->
+    <div class="page" id="page-financials">
+      
+      <!-- Financial Tabs -->
+      <div class="financial-tabs no-print">
+        <button class="f-tab active" onclick="switchFinTab('f-dashboard')">📊 Dashboard</button>
+        <button class="f-tab"        onclick="switchFinTab('f-transactions')">📝 Transactions</button>
+        <button class="f-tab"        onclick="switchFinTab('f-reports')">📃 Reports</button>
+      </div>
+
+      <!-- Tab 1: DASHBOARD -->
+      <div id="f-dashboard" class="fin-tab-content active">
+        <div class="dashboard-cards financials-grid">
+          <div class="dash-card fin-income">
+            <div class="dash-icon">📈</div>
+            <div class="dash-card-title">Total Income</div>
+            <div class="dash-card-val" id="fin-total-income">₹0.00</div>
+          </div>
+          <div class="dash-card fin-expense">
+            <div class="dash-icon">📉</div>
+            <div class="dash-card-title">Total Expenses</div>
+            <div class="dash-card-val" id="fin-total-expense">₹0.00</div>
+          </div>
+          <div class="dash-card fin-balance">
+            <div class="dash-icon">⚖️</div>
+            <div class="dash-card-title">Net Balance</div>
+            <div class="dash-card-val" id="fin-net-balance">₹0.00</div>
+          </div>
+        </div>
+
+        <div class="analytics-row">
+          <div class="analytics-card">
+            <h3>Monthly Trend</h3>
+            <canvas id="chartTrend"></canvas>
+          </div>
+          <div class="analytics-card">
+            <h3>Expense Categories</h3>
+            <canvas id="chartCategory"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: TRANSACTIONS -->
+      <div id="f-transactions" class="fin-tab-content">
+        <div class="form-card">
+          <div class="form-card-header">➕ Add Transaction</div>
+          <div class="form-card-body">
+            <div class="form-grid form-grid-4">
+              <div class="form-group">
+                <label>Date</label>
+                <input type="date" id="fin-date">
+              </div>
+              <div class="form-group">
+                <label>Type</label>
+                <select id="fin-type" onchange="updateFinCategories()">
+                  <option value="Income">Income</option>
+                  <option value="Expense" selected>Expense</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Category</label>
+                <select id="fin-category"></select>
+              </div>
+              <div class="form-group">
+                <label>Amount (₹)</label>
+                <input type="number" id="fin-amt" placeholder="0.00">
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>Description</label>
+              <input type="text" id="fin-desc" placeholder="Supplier payment, Sales, Electricity, etc.">
+            </div>
+            <div style="text-align:right;margin-top:15px;">
+              <button class="btn btn-primary" onclick="addFinTransaction()">Add Transaction</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-card" style="margin-top:20px;">
+          <div class="form-card-header">🧾 Recent Transactions</div>
+          <div class="items-table-wrapper">
+            <table class="items-table" id="fin-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Category</th>
+                  <th>Type</th>
+                  <th class="num">Amount (₹)</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="fin-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: REPORTS -->
+      <div id="f-reports" class="fin-tab-content">
+        <div class="form-card">
+          <div class="form-card-header">📅 Generate Financial Report</div>
+          <div class="form-card-body">
+            <div class="form-grid form-grid-3">
+              <div class="form-group">
+                <label>Report Period</label>
+                <select id="report-period">
+                  <option value="Daily">Daily</option>
+                  <option value="Monthly">Monthly</option>
+                  <option value="Quarterly">Quarterly</option>
+                  <option value="Half-Yearly">Half-Yearly</option>
+                  <option value="Annually">Annually</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Select Date/Year</label>
+                <input type="month" id="report-date">
+              </div>
+              <div class="form-group" style="display:flex;align-items:flex-end;">
+                <button class="btn btn-primary" style="width:100%" onclick="previewFinancialReport()">Show Report</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="print-area" id="financial-print-area" style="display:none;margin-top:20px;">
+          <div style="text-align:right;margin-bottom:16px;" class="no-print">
+            <button class="btn btn-ghost" onclick="downloadFinancialReport()" style="margin-right:8px;">⬇ Download PDF</button>
+            <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
+          </div>
+          <div id="financial-report-doc"></div>
+        </div>
+      </div>
+
+    </div><!-- /page-financials -->
+
   </div><!-- /content -->
 </main>
 
 <!-- Toast Notification -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<!-- Chart.js for Advanced Analytics -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- html2pdf.js CDN — enables the Download PDF button -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <!-- App logic -->

@@ -10,6 +10,15 @@ let quoRowCount  = 0;
 let invGstEnabled = true;   // GST toggle for Invoice
 let quoGstEnabled = true;   // GST toggle for Quotation
 
+// Financial State
+let transactions = JSON.parse(localStorage.getItem('sst_transactions') || '[]');
+let chartTrend = null;
+let chartCategory = null;
+
+const FIN_CATEGORIES = {
+  Income: ['Sales (Products)', 'Services', 'Other Income'],
+  Expense: ['Material Purchase', 'Rent & Utilities', 'Salary & Wages', 'Logistics & Courier', 'Marketing & Ads', 'Office Supplies', 'Maintenance', 'Taxes & Fees', 'Others']
+};
 
 // ── INITIALISE ON LOAD ──────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
@@ -42,6 +51,9 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  // Initialize Financials
+  initFinancials();
 });
 
 // ══════════════════════════════════════════════
@@ -60,11 +72,12 @@ function showPage(page) {
   });
 
   currentPage = page;
-  const titles = { home: 'Dashboard', invoice: 'Tax Invoice', quotation: 'Quotation' };
+  const titles = { home: 'Dashboard', invoice: 'Tax Invoice', quotation: 'Quotation', financials: 'Financials' };
   document.getElementById('topbar-title').textContent = titles[page] || page;
 
   if (page === 'invoice'   && invRowCount === 0) { addInvRow(); addInvRow(); addInvRow(); }
   if (page === 'quotation' && quoRowCount === 0) { addQuoRow(); addQuoRow(); addQuoRow(); }
+  if (page === 'financials') { refreshFinUI(); }
 
   document.querySelector('.sidebar')?.classList.remove('open');
 }
@@ -407,6 +420,233 @@ function showToast(m, t='') {
 function downloadPDF(type) {
   const el = document.getElementById(type==='invoice'?'invoice-doc':'quotation-doc');
   const opt = { margin: 5, filename: `SST_${type}_${Date.now()}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: 'css' } };
+  showToast('Generating PDF...');
+  html2pdf().set(opt).from(el).save();
+}
+
+// ══════════════════════════════════════════════
+//  FINANCIALS LOGIC
+// ══════════════════════════════════════════════
+
+function initFinancials() {
+  const fDate = document.getElementById('fin-date');
+  if (fDate) fDate.value = new Date().toISOString().split('T')[0];
+  const rDate = document.getElementById('report-date');
+  if (rDate) rDate.value = new Date().toISOString().substring(0, 7); // YYYY-MM
+  updateFinCategories();
+  refreshFinUI();
+}
+
+function switchFinTab(tabId) {
+  document.querySelectorAll('.fin-tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.f-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  
+  // Update active tab button visually
+  const btns = document.querySelectorAll('.f-tab');
+  btns.forEach(btn => {
+    if (btn.getAttribute('onclick')?.includes(tabId)) {
+      btn.classList.add('active');
+    }
+  });
+
+  if (tabId === 'f-dashboard') renderCharts();
+}
+
+function updateFinCategories() {
+  const type = document.getElementById('fin-type').value;
+  const catSel = document.getElementById('fin-category');
+  if (!catSel) return;
+  catSel.innerHTML = FIN_CATEGORIES[type].map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function addFinTransaction() {
+  const date = document.getElementById('fin-date').value;
+  const type = document.getElementById('fin-type').value;
+  const cat  = document.getElementById('fin-category').value;
+  const amt  = parseFloat(document.getElementById('fin-amt').value) || 0;
+  const desc = document.getElementById('fin-desc').value;
+
+  if (amt <= 0 || !date || !desc) { showToast('Please fill all required fields.', 'error'); return; }
+
+  const newItem = { id: Date.now(), date, type, category: cat, amount: amt, desc };
+  transactions.push(newItem);
+  localStorage.setItem('sst_transactions', JSON.stringify(transactions));
+  
+  document.getElementById('fin-amt').value = '';
+  document.getElementById('fin-desc').value = '';
+  refreshFinUI();
+  showToast('Transaction added successfully!');
+}
+
+function deleteFinTransaction(id) {
+  if (!confirm('Delete this transaction?')) return;
+  transactions = transactions.filter(t => t.id !== id);
+  localStorage.setItem('sst_transactions', JSON.stringify(transactions));
+  refreshFinUI();
+}
+
+function refreshFinUI() {
+  // Update Table
+  const tbody = document.getElementById('fin-body');
+  if (!tbody) return;
+  const sorted = [...transactions].sort((a,b) => new Date(b.date) - new Date(a.date));
+  tbody.innerHTML = sorted.map(t => `
+    <tr>
+      <td>${formatDateDMY(t.date)}</td>
+      <td class="left">${esc(t.desc)}</td>
+      <td><span class="badge" style="background:#f1f5f9;padding:4px 8px;border-radius:4px;font-size:11px;">${t.category}</span></td>
+      <td><span style="font-weight:700;color:${t.type==='Expense'?'#dc2626':'#059669'}">${t.type}</span></td>
+      <td class="num bold" style="color:${t.type==='Expense'?'#dc2626':'#059669'}">${t.type==='Expense'?'-':'+'} ₹${t.amount.toFixed(2)}</td>
+      <td><button class="del-row" onclick="deleteFinTransaction(${t.id})">✕</button></td>
+    </tr>
+  `).join('');
+
+  // Update Summary
+  let inc = 0, exp = 0;
+  transactions.forEach(t => { if(t.type==='Income') inc += t.amount; else exp += t.amount; });
+  const incEl = document.getElementById('fin-total-income');
+  const expEl = document.getElementById('fin-total-expense');
+  const balEl = document.getElementById('fin-net-balance');
+  
+  if (incEl) incEl.textContent = '₹' + inc.toLocaleString('en-IN', {minimumFractionDigits:2});
+  if (expEl) expEl.textContent = '₹' + exp.toLocaleString('en-IN', {minimumFractionDigits:2});
+  if (balEl) balEl.textContent = '₹' + (inc-exp).toLocaleString('en-IN', {minimumFractionDigits:2});
+  
+  if (document.getElementById('f-dashboard')?.classList.contains('active')) renderCharts();
+}
+
+function renderCharts() {
+  const trendEl = document.getElementById('chartTrend');
+  const catEl   = document.getElementById('chartCategory');
+  if (!trendEl || !catEl) return;
+  
+  const ctxTrend = trendEl.getContext('2d');
+  const ctxCat   = catEl.getContext('2d');
+
+  // Trend Data (Last 6 Months)
+  const months = [];
+  const incomeData = [];
+  const expenseData = [];
+  const now = new Date();
+  
+  for (let i = 5; i >= 0; i--) {
+    let d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const mLabel = d.toLocaleString('default', { month: 'short' });
+    months.push(mLabel);
+    
+    let mInc = 0, mExp = 0;
+    transactions.forEach(t => {
+      let td = new Date(t.date);
+      if (td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear()) {
+        if (t.type === 'Income') mInc += t.amount; else mExp += t.amount;
+      }
+    });
+    incomeData.push(mInc);
+    expenseData.push(mExp);
+  }
+
+  if (chartTrend) chartTrend.destroy();
+  chartTrend = new Chart(ctxTrend, {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [
+        { label: 'Income', data: incomeData, backgroundColor: '#10b981' },
+        { label: 'Expense', data: expenseData, backgroundColor: '#ef4444' }
+      ]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'top' } } }
+  });
+
+  // Category Data
+  const catMap = {};
+  transactions.filter(t => t.type === 'Expense').forEach(t => {
+    catMap[t.category] = (catMap[t.category] || 0) + t.amount;
+  });
+
+  if (chartCategory) chartCategory.destroy();
+  chartCategory = new Chart(ctxCat, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(catMap),
+      datasets: [{ data: Object.values(catMap), backgroundColor: ['#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f43f5e', '#6366f1', '#64748b'] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
+}
+
+function previewFinancialReport() {
+  const period = document.getElementById('report-period').value;
+  const rawDate = document.getElementById('report-date').value;
+  if (!rawDate) { showToast('Please select a date/period.', 'error'); return; }
+
+  const selDate = new Date(rawDate);
+  let filtered = [];
+  let title = `${period} Financial Report`;
+
+  // Filter logic
+  if (period === 'Daily') {
+    filtered = transactions.filter(t => t.date === rawDate);
+    title += ` for ${formatDateDMY(rawDate)}`;
+  } else if (period === 'Monthly') {
+    filtered = transactions.filter(t => t.date.substring(0, 7) === rawDate.substring(0, 7));
+    title += ` for ${selDate.toLocaleString('default', { month: 'long', year: 'numeric' })}`;
+  } else if (period === 'Quarterly') {
+    const q = Math.floor(selDate.getMonth() / 3) + 1;
+    filtered = transactions.filter(t => {
+      const d = new Date(t.date);
+      return d.getFullYear() === selDate.getFullYear() && (Math.floor(d.getMonth()/3)+1) === q;
+    });
+    title += ` for Q${q} ${selDate.getFullYear()}`;
+  } else if (period === 'Half-Yearly') {
+    const h = selDate.getMonth() < 6 ? 1 : 2;
+    filtered = transactions.filter(t => {
+      const d = new Date(t.date);
+      const th = d.getMonth() < 6 ? 1 : 2;
+      return d.getFullYear() === selDate.getFullYear() && th === h;
+    });
+    title += ` for H${h} ${selDate.getFullYear()}`;
+  } else if (period === 'Annually') {
+    filtered = transactions.filter(t => new Date(t.date).getFullYear() === selDate.getFullYear());
+    title += ` for Year ${selDate.getFullYear()}`;
+  }
+
+  if (filtered.length === 0) { showToast('No data for selected period.', 'error'); return; }
+
+  let inc = 0, exp = 0;
+  filtered.forEach(t => { if(t.type==='Income') inc += t.amount; else exp += t.amount; });
+
+  const html = `
+    <div class="rep-doc">
+      <div class="rep-header">
+        <div class="rep-title">SST SUPER SUN TRADERS</div>
+        <div class="rep-meta">${title}</div>
+      </div>
+      <div class="rep-summary-grid">
+        <div class="rep-sum-card"><div class="rep-sum-label">Total Income</div><div class="rep-sum-val" style="color:#059669">₹${inc.toFixed(2)}</div></div>
+        <div class="rep-sum-card"><div class="rep-sum-label">Total Expenses</div><div class="rep-sum-val" style="color:#dc2626">₹${exp.toFixed(2)}</div></div>
+        <div class="rep-sum-card"><div class="rep-sum-label">Net Balance</div><div class="rep-sum-val" style="color:#2563eb">₹${(inc-exp).toFixed(2)}</div></div>
+      </div>
+      <table class="rep-table">
+        <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Type</th><th class="num">Amount (₹)</th></tr></thead>
+        <tbody>
+          ${filtered.sort((a,b)=>new Date(a.date)-new Date(b.date)).map(t => `
+            <tr><td>${formatDateDMY(t.date)}</td><td>${esc(t.desc)}</td><td>${t.category}</td><td>${t.type}</td><td class="num">${t.amount.toFixed(2)}</td></tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  document.getElementById('financial-report-doc').innerHTML = html;
+  document.getElementById('financial-print-area').style.display = 'block';
+  showToast('Report generated!');
+}
+
+function downloadFinancialReport() {
+  const el = document.getElementById('financial-report-doc');
+  if (!el) return;
+  const opt = { margin: 10, filename: `SST_Report_${Date.now()}.pdf`, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
   showToast('Generating PDF...');
   html2pdf().set(opt).from(el).save();
 }
