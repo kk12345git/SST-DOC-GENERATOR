@@ -17,32 +17,56 @@
 <!-- ══════════════════════════════════════════
      AUTHENTICATION SCREEN (NEW)
      ══════════════════════════════════════════ -->
-<div id="auth-screen">
-  <div class="auth-card">
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-box">
     <div class="auth-header">
-      <div class="logo-container">SST</div>
+      <div class="logo-text">SST<span>APP</span></div>
       <h2 id="auth-title">Welcome Back</h2>
-      <p id="auth-subtitle">Please enter your details to continue.</p>
+      <p id="auth-subtitle">Login to manage your business financials</p>
     </div>
     
     <div class="auth-tabs">
-      <div class="auth-btn active" id="tab-login" onclick="switchAuthTab('login')" style="cursor:pointer; padding: 10px; font-weight:700;">Login</div>
-      <div class="auth-btn" id="tab-signup" onclick="switchAuthTab('signup')" style="cursor:pointer; padding: 10px; font-weight:700; color: #64748b;">Sign Up</div>
+      <div id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">LOGIN</div>
+      <div id="tab-signup" class="auth-tab" onclick="switchAuthTab('signup')">SIGNUP</div>
     </div>
 
-    <form class="auth-form" id="auth-form" onsubmit="handleAuth(event)">
-      <div class="form-group" style="margin-bottom:15px;">
-        <label for="auth-user">Username</label>
-        <input type="text" id="auth-user" placeholder="Enter Username (SST)" required style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:8px;">
+    <!-- Login Form -->
+    <form class="auth-form-el" id="login-form" onsubmit="handleAuth(event)">
+      <div class="form-group-el">
+        <label>Username</label>
+        <input type="text" id="auth-user" placeholder="Enter username" required autocomplete="username">
       </div>
-      <div class="form-group" style="margin-bottom:20px;">
-        <label for="auth-pass">Password</label>
-        <input type="password" id="auth-pass" placeholder="•••••••• (SST@123)" required style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:8px;">
+      <div class="form-group-el">
+        <label>Password</label>
+        <input type="password" id="auth-pass" placeholder="••••••••" required autocomplete="current-password">
       </div>
       <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;">
-        <span id="auth-submit-text">Sign In</span>
+        <span>Sign In</span>
       </button>
     </form>
+
+    <!-- Signup Form (Initially Hidden) -->
+    <form class="auth-form-el" id="signup-form" onsubmit="handleSignup(event)" style="display: none;">
+      <div class="form-group-el">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="Enter full name" required>
+      </div>
+      <div class="form-group-el">
+        <label>New Username</label>
+        <input type="text" id="reg-user" placeholder="Choose username" required>
+      </div>
+      <div class="form-group-el">
+        <label>Create Password</label>
+        <input type="password" id="reg-pass" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;">
+        <span>Create Account</span>
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      <a href="#" onclick="showToast('Feature coming soon!', 'info')">Forgot password?</a>
+    </div>
   </div>
 </div>
 

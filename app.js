@@ -13,6 +13,7 @@ let quoGstEnabled   = true;
 // Authentication State
 let isAuth = localStorage.getItem('sst_auth') === 'true';
 let currentUser = JSON.parse(localStorage.getItem('sst_user') || '{"name": "SST Super Sun Traders", "email": "admin@sst.com"}');
+let registeredUsers = JSON.parse(localStorage.getItem('sst_users') || '[]');
 
 // Branding State
 let companyLogo = localStorage.getItem('sst_company_logo') || '';
@@ -89,19 +90,25 @@ function checkAuth() {
 function switchAuthTab(type) {
   const loginTab = document.getElementById('tab-login');
   const signupTab = document.getElementById('tab-signup');
+  const loginForm = document.getElementById('login-form');
+  const signupForm = document.getElementById('signup-form');
   const title = document.getElementById('auth-title');
-  const submitText = document.getElementById('auth-submit-text');
+  const subtitle = document.getElementById('auth-subtitle');
 
   if (type === 'login') {
     loginTab.classList.add('active');
     signupTab.classList.remove('active');
+    loginForm.style.display = 'block';
+    signupForm.style.display = 'none';
     title.textContent = 'Welcome Back';
-    submitText.textContent = 'Sign In';
+    subtitle.textContent = 'Login to manage your business financials';
   } else {
     signupTab.classList.add('active');
     loginTab.classList.remove('active');
+    loginForm.style.display = 'none';
+    signupForm.style.display = 'block';
     title.textContent = 'Create Account';
-    submitText.textContent = 'Register Now';
+    subtitle.textContent = 'Join SST Super Sun Traders today';
   }
 }
 
@@ -110,20 +117,48 @@ function handleAuth(e) {
   const user = document.getElementById('auth-user').value;
   const pass = document.getElementById('auth-pass').value;
 
-  // Hardcoded SST Credentials
+  // 1. Check Hardcoded SST Credentials
   if (user === 'SST' && pass === 'SST@123') {
-    isAuth = true;
-    localStorage.setItem('sst_auth', 'true');
-    currentUser.name = "SST Super Sun Traders";
-    currentUser.email = "admin@sst.com";
-    localStorage.setItem('sst_user', JSON.stringify(currentUser));
-    
-    showToast("Login Successful! Welcome SST", "success");
-    checkAuth();
-    updateWelcomeText();
-  } else {
-    showToast("Invalid Credentials. Please use SST / SST@123", "error");
+    loginSuccess("SST Super Sun Traders", "admin@sst.com");
+    return;
   }
+
+  // 2. Check Registered Users
+  const found = registeredUsers.find(u => u.username === user && u.password === pass);
+  if (found) {
+    loginSuccess(found.name, `${found.username}@sst.com`);
+  } else {
+    showToast("Invalid Credentials. Please check username/password.", "error");
+  }
+}
+
+function handleSignup(e) {
+  e.preventDefault();
+  const name = document.getElementById('reg-name').value;
+  const user = document.getElementById('reg-user').value;
+  const pass = document.getElementById('reg-pass').value;
+
+  if (registeredUsers.some(u => u.username === user) || user === 'SST') {
+    showToast("Username already exists!", "error");
+    return;
+  }
+
+  registeredUsers.push({ name, username: user, password: pass });
+  localStorage.setItem('sst_users', JSON.stringify(registeredUsers));
+  
+  showToast("Account Created! You can now Login.", "success");
+  switchAuthTab('login');
+}
+
+function loginSuccess(name, email) {
+  isAuth = true;
+  localStorage.setItem('sst_auth', 'true');
+  currentUser = { name, email };
+  localStorage.setItem('sst_user', JSON.stringify(currentUser));
+  
+  showToast(`Welcome back, ${name}!`, "success");
+  checkAuth();
+  updateWelcomeText();
 }
 
 function handleLogout() {
