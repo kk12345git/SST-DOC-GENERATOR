@@ -15,6 +15,38 @@
 <body>
 
 <!-- ══════════════════════════════════════════
+     AUTHENTICATION SCREEN (NEW)
+     ══════════════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="logo-container">SST</div>
+      <h2 id="auth-title">Welcome Back</h2>
+      <p id="auth-subtitle">Please enter your details to continue.</p>
+    </div>
+    
+    <div class="auth-tabs">
+      <div class="auth-btn active" id="tab-login" onclick="switchAuthTab('login')" style="cursor:pointer; padding: 10px; font-weight:700;">Login</div>
+      <div class="auth-btn" id="tab-signup" onclick="switchAuthTab('signup')" style="cursor:pointer; padding: 10px; font-weight:700; color: #64748b;">Sign Up</div>
+    </div>
+
+    <form class="auth-form" id="auth-form" onsubmit="handleAuth(event)">
+      <div class="form-group" style="margin-bottom:15px;">
+        <label for="auth-user">Username</label>
+        <input type="text" id="auth-user" placeholder="Enter Username (SST)" required style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:8px;">
+      </div>
+      <div class="form-group" style="margin-bottom:20px;">
+        <label for="auth-pass">Password</label>
+        <input type="password" id="auth-pass" placeholder="•••••••• (SST@123)" required style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:8px;">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;">
+        <span id="auth-submit-text">Sign In</span>
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
      MOBILE MENU TOGGLE
      ══════════════════════════════════════════ -->
 <button class="menu-toggle" id="menu-toggle" aria-label="Open navigation menu">☰</button>
@@ -25,7 +57,10 @@
 <aside class="sidebar" aria-label="Primary navigation">
 
   <div class="sidebar-logo">
-    <div class="logo-circle" aria-hidden="true">SST</div>
+    <div class="logo-container" id="sidebar-logo-box">
+      <span id="logo-text">SST</span>
+      <img id="company-logo-preview" src="" alt="" style="display:none; max-width:100%; max-height:100%;">
+    </div>
     <div class="sidebar-brand">SST Super Sun Traders<span>Chennai – 600 024</span></div>
   </div>
 
@@ -46,6 +81,16 @@
 
     <button class="nav-btn" data-page="financials" onclick="showPage('financials')">
       <span class="icon" aria-hidden="true">💰</span> Financials
+    </button>
+
+    <div class="nav-label" style="margin-top: 20px;">System</div>
+    
+    <button class="nav-btn" data-page="settings" onclick="showPage('settings')">
+      <span class="icon" aria-hidden="true">⚙️</span> Settings
+    </button>
+
+    <button class="nav-btn" onclick="handleLogout()" style="color: var(--danger)">
+      <span class="icon" aria-hidden="true">🚪</span> Logout
     </button>
   </nav>
 
@@ -363,7 +408,7 @@
                 <input type="text" id="quo-contact" placeholder="Contact person name" autocomplete="name">
               </div>
             </div>
-            <div class="form-grid form-grid-2" style="margin-top:12px;">
+            <div class="form-grid form-grid-3" style="margin-top:12px;">
               <div class="form-group">
                 <label for="quo-client-addr">Address</label>
                 <textarea id="quo-client-addr" placeholder="Full address..." autocomplete="street-address"></textarea>
@@ -371,6 +416,14 @@
               <div class="form-group">
                 <label for="quo-client-phone">Phone</label>
                 <input type="tel" id="quo-client-phone" placeholder="Phone number" autocomplete="tel">
+              </div>
+              <div class="form-group">
+                <label>Client Logo (Optional)</label>
+                <div class="upload-zone" onclick="document.getElementById('quo-client-logo').click()">
+                   <span id="quo-logo-status">Click to upload client logo</span>
+                   <input type="file" id="quo-client-logo" hidden accept="image/*" onchange="handleClientLogo(this)">
+                   <img id="quo-logo-preview" class="upload-preview">
+                </div>
               </div>
             </div>
           </div>
@@ -594,6 +647,87 @@
       </div>
 
     </div><!-- /page-financials -->
+
+    <!-- ──────────────────────────────────────
+         SETTINGS PAGE
+         ────────────────────────────────────── -->
+    <div class="page" id="page-settings">
+      <div class="welcome-header">
+        <h1>App Settings ⚙️</h1>
+        <p>Manage your company profile, branding, and account security.</p>
+      </div>
+
+      <div class="settings-grid">
+        
+        <!-- Branding Card -->
+        <div class="form-card">
+          <div class="form-card-header">🖼 Company Branding</div>
+          <div class="form-card-body">
+            <div class="form-group">
+              <label>Company Logo</label>
+              <div class="upload-zone" id="company-upload-zone" onclick="document.getElementById('company-logo-input').click()">
+                <div id="company-upload-placeholder">
+                  <div style="font-size: 32px; margin-bottom: 10px;">📤</div>
+                  <strong>Click to upload your company logo</strong>
+                  <p style="font-size: 12px; color: var(--gray-500); margin-top: 5px;">Recommended: PNG or JPEG (Transparent background)</p>
+                </div>
+                <input type="file" id="company-logo-input" hidden accept="image/*" onchange="handleCompanyLogo(this)">
+                <img id="company-logo-settings-preview" class="upload-preview" style="display:none; max-width: 100%; max-height: 120px; object-fit: contain;">
+              </div>
+              <button class="btn btn-ghost" onclick="removeCompanyLogo()" style="margin-top: 15px; width: 100%; display: none;" id="btn-remove-logo">🗑 Remove Logo</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Account Card -->
+        <div class="form-card">
+          <div class="form-card-header">👤 User Profile</div>
+          <div class="form-card-body">
+            <div class="form-group">
+              <label>User Name</label>
+              <input type="text" id="settings-user-name" value="SST Super Sun Traders">
+            </div>
+            <div class="form-group" style="margin-top: 15px;">
+              <label>Email Address</label>
+              <input type="email" id="settings-user-email" value="admin@sst.com" readonly>
+            </div>
+            <div style="margin-top: 24px;">
+              <button class="btn btn-primary" onclick="saveSettings()" style="width: 100%; justify-content: center;">💾 Save Changes</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interface Design Card -->
+        <div class="form-card" style="grid-column: span 2;">
+          <div class="form-card-header">🎨 Interface Design (UI/UX)</div>
+          <div class="form-card-body">
+            <div class="form-grid form-grid-4">
+              <div class="form-group">
+                <label>Primary Color</label>
+                <input type="color" id="theme-primary" value="#6366f1" oninput="updateThemePreview()">
+              </div>
+              <div class="form-group">
+                <label>Accent Color</label>
+                <input type="color" id="theme-accent" value="#10b981" oninput="updateThemePreview()">
+              </div>
+              <div class="form-group">
+                <label>Glass Opacity</label>
+                <input type="range" id="theme-glass-opacity" min="10" max="95" value="70" oninput="updateThemePreview()">
+              </div>
+              <div class="form-group">
+                <label>Corner Radius</label>
+                <input type="range" id="theme-radius" min="0" max="40" value="12" oninput="updateThemePreview()">
+              </div>
+            </div>
+            <div style="margin-top: 24px; display: flex; gap: 15px;">
+              <button class="btn btn-primary" onclick="saveTheme()" style="flex: 1; justify-content: center;">💾 Save UI Design</button>
+              <button class="btn btn-ghost" onclick="resetTheme()" style="justify-content: center;">🔄 Reset Defaults</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /page-settings -->
 
   </div><!-- /content -->
 </main>

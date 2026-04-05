@@ -1,14 +1,22 @@
 // ══════════════════════════════════════════════
 //  SST SUPER SUN TRADERS – Pricing App Logic
-//  app.js (Refactored: Simply Tally Edition)
+//  Enhanced UI/UX & Logo Management Edition
 // ══════════════════════════════════════════════
 
 // ── STATE & CONSTANTS ──────────────────────────
-let currentPage   = 'home';
-let invRowCount   = 0;
-let quoRowCount   = 0;
-let invGstEnabled  = true;
-let quoGstEnabled  = true;
+let currentPage    = 'home';
+let invRowCount    = 0;
+let quoRowCount    = 0;
+let invGstEnabled   = true;
+let quoGstEnabled   = true;
+
+// Authentication State
+let isAuth = localStorage.getItem('sst_auth') === 'true';
+let currentUser = JSON.parse(localStorage.getItem('sst_user') || '{"name": "SST Super Sun Traders", "email": "admin@sst.com"}');
+
+// Branding State
+let companyLogo = localStorage.getItem('sst_company_logo') || '';
+let currentClientLogo = ''; // Specific to current quotation
 
 // Simply Tally - Financial State
 let transactions = JSON.parse(localStorage.getItem('sst_transactions') || '[]');
@@ -31,8 +39,15 @@ const LEDGER_CATEGORIES = {
 
 // ── INITIALISE ON LOAD ──────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-  // Initialization - Ensure elements exist
+  initApp();
+});
+
+function initApp() {
   try {
+    checkAuth();
+    loadSettings();
+    
+    // Dates
     const today = new Date().toISOString().split('T')[0];
     const invDate = document.getElementById('inv-date');
     const quoDate = document.getElementById('quo-date');
@@ -49,20 +64,239 @@ window.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Keyboard navigation
-    document.querySelectorAll('.dash-card').forEach(card => {
-      card.setAttribute('tabindex', '0');
-      card.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); }
-      });
-    });
-
     // Initialize Financials module safely
     if (typeof initFinancials === 'function') initFinancials();
+    
+    // Initialize Dashboard welcome
+    updateWelcomeText();
   } catch (err) {
     console.error("Initialization Error:", err);
   }
-});
+}
+
+// ══════════════════════════════════════════════
+//  AUTHENTICATION MOCK
+// ══════════════════════════════════════════════
+function checkAuth() {
+  const authScreen = document.getElementById('auth-screen');
+  if (isAuth) {
+    authScreen.style.display = 'none';
+  } else {
+    authScreen.style.display = 'flex';
+  }
+}
+
+function switchAuthTab(type) {
+  const loginTab = document.getElementById('tab-login');
+  const signupTab = document.getElementById('tab-signup');
+  const title = document.getElementById('auth-title');
+  const submitText = document.getElementById('auth-submit-text');
+
+  if (type === 'login') {
+    loginTab.classList.add('active');
+    signupTab.classList.remove('active');
+    title.textContent = 'Welcome Back';
+    submitText.textContent = 'Sign In';
+  } else {
+    signupTab.classList.add('active');
+    loginTab.classList.remove('active');
+    title.textContent = 'Create Account';
+    submitText.textContent = 'Register Now';
+  }
+}
+
+function handleAuth(e) {
+  e.preventDefault();
+  const user = document.getElementById('auth-user').value;
+  const pass = document.getElementById('auth-pass').value;
+
+  // Hardcoded SST Credentials
+  if (user === 'SST' && pass === 'SST@123') {
+    isAuth = true;
+    localStorage.setItem('sst_auth', 'true');
+    currentUser.name = "SST Super Sun Traders";
+    currentUser.email = "admin@sst.com";
+    localStorage.setItem('sst_user', JSON.stringify(currentUser));
+    
+    showToast("Login Successful! Welcome SST", "success");
+    checkAuth();
+    updateWelcomeText();
+  } else {
+    showToast("Invalid Credentials. Please use SST / SST@123", "error");
+  }
+}
+
+function handleLogout() {
+  if (!confirm("Are you sure you want to logout?")) return;
+  isAuth = false;
+  localStorage.removeItem('sst_auth');
+  checkAuth();
+}
+
+function updateWelcomeText() {
+  const welcome = document.querySelector('.welcome-header h1 span');
+  if (welcome) welcome.textContent = currentUser.name.split(' ')[0];
+}
+
+// ══════════════════════════════════════════════
+//  SETTINGS & BRANDING
+// ══════════════════════════════════════════════
+function loadSettings() {
+  // Load Logo
+  if (companyLogo) {
+    updateLogoPreviews(companyLogo);
+  }
+  
+  // Load User Info
+  const nameInput = document.getElementById('settings-user-name');
+  if (nameInput) nameInput.value = currentUser.name;
+
+  // Load Theme
+  loadTheme();
+}
+
+// ── UI/UX THEME CUSTOMIZER ──────────────────
+function hexToRGB(hex) {
+  let r = 0, g = 0, b = 0;
+  // 3 digits
+  if (hex.length == 4) {
+    r = "0x" + hex[1] + hex[1];
+    g = "0x" + hex[2] + hex[2];
+    b = "0x" + hex[3] + hex[3];
+  } else if (hex.length == 7) {
+    r = "0x" + hex[1] + hex[2];
+    g = "0x" + hex[3] + hex[4];
+    b = "0x" + hex[5] + hex[6];
+  }
+  return `${+r}, ${+g}, ${+b}`;
+}
+
+function updateThemePreview() {
+  const primary = document.getElementById('theme-primary').value;
+  const accent  = document.getElementById('theme-accent').value;
+  const opacity = document.getElementById('theme-glass-opacity').value / 100;
+  const radius  = document.getElementById('theme-radius').value;
+
+  const root = document.documentElement;
+  root.style.setProperty('--primary', primary);
+  root.style.setProperty('--accent', accent);
+  root.style.setProperty('--primary-glow', `rgba(${hexToRGB(primary)}, 0.3)`);
+  root.style.setProperty('--glass-bg', `rgba(255, 255, 255, ${opacity})`);
+  root.style.setProperty('--radius-md', `${radius}px`);
+  root.style.setProperty('--radius-lg', `${radius * 1.5}px`);
+  root.style.setProperty('--radius-xl', `${radius * 2.5}px`);
+}
+
+function saveTheme() {
+  const settings = {
+    primary: document.getElementById('theme-primary').value,
+    accent:  document.getElementById('theme-accent').value,
+    opacity: document.getElementById('theme-glass-opacity').value,
+    radius:  document.getElementById('theme-radius').value
+  };
+  localStorage.setItem('sst_theme', JSON.stringify(settings));
+  showToast("UI Design Saved Successfully!", "success");
+}
+
+function resetTheme() {
+  if (!confirm("Reset all UI changes to default?")) return;
+  localStorage.removeItem('sst_theme');
+  location.reload();
+}
+
+function loadTheme() {
+  const saved = localStorage.getItem('sst_theme');
+  if (saved) {
+    const theme = JSON.parse(saved);
+    document.getElementById('theme-primary').value = theme.primary;
+    document.getElementById('theme-accent').value  = theme.accent;
+    document.getElementById('theme-glass-opacity').value = theme.opacity;
+    document.getElementById('theme-radius').value  = theme.radius;
+    updateThemePreview();
+  }
+}
+
+function handleCompanyLogo(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      companyLogo = e.target.result;
+      updateLogoPreviews(companyLogo);
+      showToast("Company logo uploaded successfully.");
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function updateLogoPreviews(dataUrl) {
+  const sidebarLogoBox = document.getElementById('sidebar-logo-box');
+  const logoText = document.getElementById('logo-text');
+  const sidebarPreview = document.getElementById('company-logo-preview');
+  const settingsPreview = document.getElementById('company-logo-settings-preview');
+  const placeholder = document.getElementById('company-upload-placeholder');
+  const removeBtn = document.getElementById('btn-remove-logo');
+
+  if (dataUrl) {
+    if (logoText) logoText.style.display = 'none';
+    if (sidebarPreview) {
+      sidebarPreview.src = dataUrl;
+      sidebarPreview.style.display = 'block';
+    }
+    if (settingsPreview) {
+      settingsPreview.src = dataUrl;
+      settingsPreview.style.display = 'block';
+    }
+    if (placeholder) placeholder.style.display = 'none';
+    if (removeBtn) removeBtn.style.display = 'block';
+  }
+}
+
+function removeCompanyLogo() {
+  companyLogo = '';
+  localStorage.removeItem('sst_company_logo');
+  
+  const logoText = document.getElementById('logo-text');
+  const sidebarPreview = document.getElementById('company-logo-preview');
+  const settingsPreview = document.getElementById('company-logo-settings-preview');
+  const placeholder = document.getElementById('company-upload-placeholder');
+  const removeBtn = document.getElementById('btn-remove-logo');
+
+  if (logoText) logoText.style.display = 'block';
+  if (sidebarPreview) sidebarPreview.style.display = 'none';
+  if (settingsPreview) settingsPreview.style.display = 'none';
+  if (placeholder) placeholder.style.display = 'block';
+  if (removeBtn) removeBtn.style.display = 'none';
+  
+  showToast("Logo removed.");
+}
+
+function handleClientLogo(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      currentClientLogo = e.target.result;
+      const preview = document.getElementById('quo-logo-preview');
+      const status = document.getElementById('quo-logo-status');
+      if (preview) {
+        preview.src = currentClientLogo;
+        preview.style.display = 'block';
+      }
+      if (status) status.style.display = 'none';
+      showToast("Client logo attached to quotation.");
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function saveSettings() {
+  const name = document.getElementById('settings-user-name').value;
+  currentUser.name = name;
+  localStorage.setItem('sst_user', JSON.stringify(currentUser));
+  if (companyLogo) localStorage.setItem('sst_company_logo', companyLogo);
+  
+  showToast("Settings saved successfully.");
+  updateWelcomeText();
+}
 
 // ══════════════════════════════════════════════
 //  NAVIGATION
@@ -80,7 +314,7 @@ function showPage(page) {
   });
 
   currentPage = page;
-  const titles = { home:'Dashboard', invoice:'Tax Invoice', quotation:'Quotation', financials:'Financials' };
+  const titles = { home:'Dashboard', invoice:'Tax Invoice', quotation:'Quotation', financials:'Financials', settings:'App Settings' };
   document.getElementById('topbar-title').textContent = titles[page] || page;
 
   if (page === 'invoice'   && invRowCount === 0) { addInvRow(); addInvRow(); addInvRow(); }
@@ -88,6 +322,7 @@ function showPage(page) {
   if (page === 'financials') { refreshFinUI(); }
 
   document.querySelector('.sidebar')?.classList.remove('open');
+  window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
 function backToForm(type) {
@@ -112,6 +347,10 @@ function resetForm() {
     setQuoGst(true);
     calcQuoTotals();
     backToForm('quotation');
+    // Reset client logo
+    currentClientLogo = '';
+    document.getElementById('quo-logo-preview').style.display = 'none';
+    document.getElementById('quo-logo-status').style.display = 'block';
   }
   const today = new Date().toISOString().split('T')[0];
   if (currentPage === 'invoice')   document.getElementById('inv-date').value = today;
@@ -170,8 +409,8 @@ function addInvRow() {
         <option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option><option value="0">0%</option>
       </select>
     </td>
-    <td class="gst-col"><input type="text" placeholder="0.00" readonly style="background:#f9fafb;width:80px;font-family:'DM Mono',monospace;font-size:12px;" id="inv-gstamt-${n}"></td>
-    <td><input type="text" placeholder="0.00" readonly style="background:#f9fafb;width:90px;font-family:'DM Mono',monospace;font-size:12px;" id="inv-amt-${n}"></td>
+    <td class="gst-col"><input type="text" placeholder="0.00" readonly style="background:#f9fafb;width:80px;font-family:'JetBrains Mono',monospace;font-size:12px;" id="inv-gstamt-${n}"></td>
+    <td><input type="text" placeholder="0.00" readonly style="background:#f9fafb;width:90px;font-family:'JetBrains Mono',monospace;font-size:12px;" id="inv-amt-${n}"></td>
     <td><input type="text" placeholder="Batch No." style="width:100px"></td>
     <td><input type="text" placeholder="dd/mm/yy" style="width:80px"></td>
     <td><input type="text" placeholder="dd/mm/yy" style="width:80px"></td>
@@ -197,8 +436,8 @@ function addQuoRow() {
         <option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option><option value="0">0%</option>
       </select>
     </td>
-    <td class="gst-col"><input type="text" readonly placeholder="0.00" style="background:#f9fafb;width:90px;font-family:'DM Mono',monospace;font-size:12px;" id="quo-gstamt-${n}"></td>
-    <td><input type="text" readonly placeholder="0.00" style="background:#f9fafb;width:100px;font-family:'DM Mono',monospace;font-size:12px;" id="quo-total-${n}"></td>
+    <td class="gst-col"><input type="text" readonly placeholder="0.00" style="background:#f9fafb;width:90px;font-family:'JetBrains Mono',monospace;font-size:12px;" id="quo-gstamt-${n}"></td>
+    <td><input type="text" readonly placeholder="0.00" style="background:#f9fafb;width:100px;font-family:'JetBrains Mono',monospace;font-size:12px;" id="quo-total-${n}"></td>
     <td><button class="del-row" onclick="delRow('quo-row-${n}','quo')">✕</button></td>
   `;
   tbody.appendChild(tr);
@@ -275,6 +514,231 @@ function calcQuoTotals() {
   if (grandEl) grandEl.textContent = '₹' + grand.toFixed(2);
 }
 
+// ══════════════════════════════════════════════
+//  PREVIEW & PRINT (UPDATED FOR LOGOS)
+// ══════════════════════════════════════════════
+
+function previewInvoice() {
+  const data = getInvoiceData();
+  const html = `
+    <div style="font-family:'Inter',sans-serif;color:#1e293b;padding:5mm;">
+      <div class="doc-logo-container">
+        ${companyLogo ? `<img src="${companyLogo}" class="doc-company-logo">` : `<div style="font-size:24px;font-weight:900;color:var(--primary)">SST Super Sun Traders</div>`}
+        <div style="text-align:right">
+          <h1 style="margin:0;font-size:24px;color:#6366f1;">TAX INVOICE</h1>
+          <p style="margin:5px 0 0;font-size:12px;color:#64748b;">${esc(data.invNo)} | ${formatDateDMY(data.invDate)}</p>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:30px;font-size:12px;">
+        <div style="border:1px solid #e2e8f0;border-radius:10px;padding:15px;">
+          <h3 style="margin:0 0 10px;font-size:10px;text-transform:uppercase;color:#94a3b8;">Seller</h3>
+          <p><strong>SST Super Sun Traders</strong><br>#29/23, 8th Street, Kodambakkam, Chennai<br>GST: 33BKGPV4919L1ZM</p>
+        </div>
+        <div style="border:1px solid #e2e8f0;border-radius:10px;padding:15px;">
+          <h3 style="margin:0 0 10px;font-size:10px;text-transform:uppercase;color:#94a3b8;">Buyer</h3>
+          <p><strong>${esc(data.buyerName)}</strong><br>${esc(data.buyerAddr).replace(/\n/g,'<br>')}<br>GST: ${esc(data.buyerGst)}</p>
+        </div>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:20px;">
+        <thead>
+          <tr style="background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
+            <th style="padding:10px;text-align:center;">#</th>
+            <th style="padding:10px;text-align:left;">Description</th>
+            <th style="padding:10px;">HSN</th>
+            <th style="padding:10px;">Qty</th>
+            <th style="padding:10px;">Rate</th>
+            <th style="padding:10px;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.items.map((it, i) => `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px;text-align:center;">${i+1}</td>
+              <td style="padding:10px;"><strong>${esc(it.desc)}</strong></td>
+              <td style="padding:10px;text-align:center;">${esc(it.hsn)}</td>
+              <td style="padding:10px;text-align:center;">${it.qty} ${esc(it.unit)}</td>
+              <td style="padding:10px;text-align:center;">₹${it.rate.toFixed(2)}</td>
+              <td style="padding:10px;text-align:right;">₹${(it.qty*it.rate).toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:20px;">
+        <div style="font-size:11px;color:#64748b;padding-top:10px;">
+          <p>Amount in words: <br><strong style="color:#1e293b">${amtWords(data.grand)}</strong></p>
+        </div>
+        <div style="font-size:13px;border:1px solid #e2e8f0;border-radius:10px;padding:15px;background:#f8fafc;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>Subtotal</span><span>₹${data.sub.toFixed(2)}</span></div>
+          ${invGstEnabled ? `
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>CGST</span><span>₹${data.cgst.toFixed(2)}</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>SGST</span><span>₹${data.sgst.toFixed(2)}</span></div>
+          ` : ''}
+          <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid #e2e8f0;font-weight:900;font-size:16px;color:#6366f1;">
+            <span>Grand Total</span><span>₹${data.grand.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div style="margin-top:60px;display:flex;justify-content:space-between;font-size:11px;">
+        <div>
+          <p style="margin-bottom:40px;">Received with thanks,</p>
+          <p>Customer Signature</p>
+        </div>
+        <div style="text-align:right;">
+          <p style="margin-bottom:40px;">For <strong>SST Super Sun Traders</strong></p>
+          <p>Authorized Signatory</p>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('invoice-doc').innerHTML = html;
+  document.getElementById('invoice-form-section').style.display = 'none';
+  document.getElementById('invoice-print-area').style.display   = 'block';
+  window.scrollTo({top: 0, behavior: 'auto'});
+}
+
+function previewQuotation() {
+  const data = getQuotationData();
+  const html = `
+    <div style="font-family:'Inter',sans-serif;color:#1e293b;padding:5mm;">
+      <div class="doc-logo-container">
+        ${companyLogo ? `<img src="${companyLogo}" class="doc-company-logo">` : `<div style="font-size:24px;font-weight:900;color:var(--primary)">SST Super Sun Traders</div>`}
+        ${currentClientLogo ? `<img src="${currentClientLogo}" class="doc-client-logo">` : `<div></div>`}
+      </div>
+
+      <div style="text-align:center;margin-bottom:40px;">
+        <h1 style="margin:0;font-size:28px;letter-spacing:1px;color:#6366f1;">QUOTATION</h1>
+        <div style="width:60px;height:3px;background:#6366f1;margin:10px auto;"></div>
+        <p style="margin:0;font-size:13px;color:#64748b;">${esc(data.quoNo)} | ${formatDateDMY(data.quoDate)}</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-bottom:30px;font-size:13px;">
+        <div>
+          <h3 style="margin:0 0 12px;font-size:11px;text-transform:uppercase;color:#94a3b8;letter-spacing:1px;">Client Info</h3>
+          <p><strong>${esc(data.clientName)}</strong><br>${esc(data.clientAddr).replace(/\n/g,'<br>')}<br>Ph: ${esc(data.phone)}</p>
+        </div>
+        <div style="text-align:right;">
+          <h3 style="margin:0 0 12px;font-size:11px;text-transform:uppercase;color:#94a3b8;letter-spacing:1px;">Validity</h3>
+          <p>This quotation is valid until:<br><strong>${data.validUntil ? formatDateDMY(data.validUntil) : 'NA'}</strong></p>
+        </div>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:30px;">
+        <thead>
+          <tr style="background:#6366f1;color:white;">
+            <th style="padding:12px;text-align:center;border-radius:6px 0 0 6px;">#</th>
+            <th style="padding:12px;text-align:left;">Product / Description</th>
+            <th style="padding:12px;text-align:center;">Code</th>
+            <th style="padding:12px;text-align:right;border-radius:0 6px 6px 0;">Price (₹)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.items.map((it, i) => `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:12px;text-align:center;color:#64748b;">${i+1}</td>
+              <td style="padding:12px;"><strong>${esc(it.name)}</strong></td>
+              <td style="padding:12px;text-align:center;color:#64748b;">${esc(it.code)}</td>
+              <td style="padding:12px;text-align:right;font-weight:600;">₹${it.price.toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div style="width:300px;margin-left:auto;border-top:2px solid #6366f1;padding-top:15px;">
+        ${quoGstEnabled ? `
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:14px;color:#64748b;">
+          <span>Sub Total</span><span>₹${data.sub.toFixed(2)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:14px;color:#64748b;">
+          <span>GST Amount</span><span>₹${data.gst.toFixed(2)}</span>
+        </div>
+        ` : ''}
+        <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:900;color:#1e293b;">
+          <span>Total Value</span><span>₹${data.grand.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div style="margin-top:80px;font-size:12px;border-top:1px solid #f1f5f9;padding-top:20px;">
+        <h4 style="margin:0 0 10px;color:#6366f1;">Terms & Conditions:</h4>
+        <ul style="padding-left:18px;color:#64748b;margin:0;">
+          <li>Payment should be made in favor of SST Super Sun Traders.</li>
+          <li>Delivery within 7-10 working days of official order.</li>
+          <li>Valid for the period specified above.</li>
+        </ul>
+      </div>
+
+      <div style="margin-top:60px;text-align:right;">
+        <p style="margin-bottom:50px;">For <strong>SST Super Sun Traders</strong></p>
+        <p style="font-weight:700;">Authorized Signature</p>
+      </div>
+    </div>
+  `;
+  document.getElementById('quotation-doc').innerHTML = html;
+  document.getElementById('quotation-form-section').style.display = 'none';
+  document.getElementById('quotation-print-area').style.display   = 'block';
+  window.scrollTo({top: 0, behavior: 'auto'});
+}
+
+function getInvoiceData() {
+  const items = [];
+  document.querySelectorAll('#inv-items-body tr').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const desc = inputs[0]?.value;
+    if (!desc) return;
+    items.push({
+      desc:  desc,
+      hsn:   inputs[1]?.value || '',
+      qty:   parseFloat(inputs[2]?.value) || 0,
+      unit:  inputs[3]?.value || 'pcs',
+      rate:  parseFloat(inputs[4]?.value) || 0
+    });
+  });
+  const sub   = parseFloat(document.getElementById('inv-subtotal').textContent.replace('₹','')) || 0;
+  const grand = parseFloat(document.getElementById('inv-grand').textContent.replace('₹',''))    || 0;
+  const cgst  = parseFloat(document.getElementById('inv-cgst').textContent.replace('₹',''))     || 0;
+  const sgst  = parseFloat(document.getElementById('inv-sgst').textContent.replace('₹',''))     || 0;
+
+  return {
+    invNo:     document.getElementById('inv-no').value,
+    invDate:   document.getElementById('inv-date').value,
+    buyerName: document.getElementById('inv-buyer-name').value || 'Cash / Counter',
+    buyerAddr: document.getElementById('inv-buyer-addr').value || '',
+    buyerGst:  document.getElementById('inv-buyer-gst').value || '-',
+    items, sub, cgst, sgst, grand
+  };
+}
+
+function getQuotationData() {
+  const items = [];
+  document.querySelectorAll('#quo-items-body tr').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const name = inputs[0]?.value;
+    if (!name) return;
+    items.push({
+      name:  name,
+      code:  inputs[1]?.value || '-',
+      price: parseFloat(inputs[2]?.value) || 0
+    });
+  });
+  const sub   = parseFloat(document.getElementById('quo-subtotal').textContent.replace('₹','')) || 0;
+  const gst   = parseFloat(document.getElementById('quo-gst').textContent.replace('₹',''))      || 0;
+  const grand = parseFloat(document.getElementById('quo-grand').textContent.replace('₹',''))    || 0;
+
+  return {
+    quoNo:      document.getElementById('quo-no').value || 'Draft',
+    quoDate:    document.getElementById('quo-date').value,
+    validUntil: document.getElementById('quo-valid').value,
+    clientName: document.getElementById('quo-client-name').value || 'Valued Client',
+    clientAddr: document.getElementById('quo-client-addr').value || '-',
+    phone:      document.getElementById('quo-client-phone').value || '-',
+    items, sub, gst, grand
+  };
+}
+
+
 // ── UTILS ──────────────────────────────────────
 function formatDateDMY(s) { 
   if(!s) return ''; 
@@ -286,7 +750,7 @@ function showToast(m, t='') {
   const el = document.getElementById('toast');
   if(!el) return;
   el.textContent = (t==='error'?'❌ ':'✅ ') + m;
-  el.className = 'toast show ' + t;
+  el.className = 'toast show ' + (t === 'error' ? 'error' : '');
   setTimeout(()=>el.classList.remove('show'), 3000);
 }
 
@@ -480,7 +944,7 @@ function renderCharts() {
     if (chartTrend) chartTrend.destroy();
     chartTrend = new Chart(ctxTrend, {
       type: 'bar',
-      data: { labels: months, datasets: [ { label: 'Inflow (Cr)', data: crData, backgroundColor: '#10b981' }, { label: 'Outflow (Dr)', data: drData, backgroundColor: '#ef4444' } ] },
+      data: { labels: months, datasets: [ { label: 'Inflow (Cr)', data: crData, backgroundColor: '#6366f1' }, { label: 'Outflow (Dr)', data: drData, backgroundColor: '#f43f5e' } ] },
       options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
     });
 
@@ -492,7 +956,7 @@ function renderCharts() {
     if (chartCategory) chartCategory.destroy();
     chartCategory = new Chart(ctxCat, {
       type: 'doughnut',
-      data: { labels: Object.keys(catMap), datasets: [{ data: Object.values(catMap), backgroundColor: ['#3b82f6','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#10b981','#6366f1'] }] },
+      data: { labels: Object.keys(catMap), datasets: [{ data: Object.values(catMap), backgroundColor: ['#6366f1','#10b981','#f59e0b','#f43f5e','#8b5cf6','#06b6d4','#6366f1'] }] },
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
     });
   } catch (e) {
