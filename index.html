@@ -6,7 +6,9 @@
 
   <!-- SEO -->
   <title>SST Super Sun Traders – Invoice &amp; Quotation</title>
-  <meta name="description" content="SST Super Sun Traders internal pricing app. Generate GST-compliant tax invoices and professional quotations. Chennai.">
+  <meta name="description" content="SST Super Sun Traders - Professional GST Tax Invoices and Quotations Generator. Secure, fast, and cinematic internal business tool.">
+  <meta name="keywords" content="SST, Super Sun Traders, Invoice, Quotation, GST calculation, Chennai business">
+  <meta name="author" content="SST Super Sun Traders">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#080c18">
 
@@ -20,12 +22,11 @@
      ══════════════════════════════════════════ -->
 
 <!-- 🌙☀️ Floating theme toggle on auth screen -->
-<button class="theme-toggle auth-theme-toggle" id="auth-theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">
-  <div class="theme-toggle-track"><span>🌙</span><span>☀️</span></div>
-  <div class="theme-toggle-pill" id="theme-pill">🌙</div>
-</button>
-
 <div id="auth-screen" class="auth-screen">
+  <button class="theme-toggle auth-theme-toggle" id="auth-theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">
+    <div class="theme-toggle-track"><span>🌙</span><span>☀️</span></div>
+    <div class="theme-toggle-pill" id="theme-pill">🌙</div>
+  </button>
   <div class="auth-box">
     <div class="auth-header">
       <div class="logo-ring">🏢</div>
@@ -43,11 +44,11 @@
     <form class="auth-form-el" id="login-form" onsubmit="handleAuth(event)">
       <div class="form-group-el">
         <label>Username</label>
-        <input type="text" id="auth-user" placeholder="Enter username" required autocomplete="username">
+        <input type="text" id="auth-user" placeholder="Enter username" required autocomplete="username" aria-label="Username">
       </div>
       <div class="form-group-el">
         <label>Password</label>
-        <input type="password" id="auth-pass" placeholder="••••••••" required autocomplete="current-password">
+        <input type="password" id="auth-pass" placeholder="••••••••" required autocomplete="current-password" aria-label="Password">
       </div>
       <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
         <span>🚀 Sign In</span>
@@ -80,7 +81,8 @@
 </div>
 
 <!-- Sidebar overlay (mobile) -->
-<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+<div id="app-container" style="display: none;">
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <!-- Mobile menu toggle button -->
 <button class="menu-toggle" id="menu-toggle" aria-label="Open navigation menu">☰</button>
@@ -142,7 +144,7 @@
 
   <!-- Top Bar -->
   <div class="topbar">
-    <div class="topbar-title" id="topbar-title">Dashboard</div>
+    <div class="topbar-title" id="topbar-title" aria-live="polite">Dashboard</div>
     <div class="topbar-actions" id="topbar-actions">
       <!-- 🌙☀️ Theme Toggle -->
       <button class="theme-toggle" id="topbar-theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">
@@ -786,6 +788,7 @@
     <span class="bnav-icon">⚙️</span>Settings
   </button>
 </nav>
+</div> <!-- /app-container -->
 
 <!-- Toast Notification -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>

@@ -1849,3 +1849,66 @@ a { text-decoration: none; }
   color: #fff;
 }
 
+/* ══════════════════════════════════════════════════
+   MOBILE RESPONSIVENESS & TABLE SCROLLING
+   ══════════════════════════════════════════════════ */
+.items-table-wrapper {
+  cursor: grab;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+}
+.items-table-wrapper:active { cursor: grabbing; }
+
+@media (max-width: 1024px) {
+  .items-table { min-width: 900px; }
+  .form-grid-4 { grid-template-columns: 1fr 1fr; }
+  .dashboard-cards { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 768px) {
+  .form-grid-3, .form-grid-4 { grid-template-columns: 1fr; }
+  .dashboard-cards { grid-template-columns: 1fr; }
+  .topbar { padding: 0 16px; }
+  .content { padding: 20px 16px 100px; }
+}
+
+/* ══════════════════════════════════════════════════
+   PRINT & PDF OPTIMIZATION
+   ══════════════════════════════════════════════════ */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .sidebar, .topbar, .bottom-nav, .no-print, .theme-toggle, .btn-ghost, .menu-toggle { display: none !important; }
+  .main { margin-left: 0 !important; padding: 0 !important; }
+  .content { padding: 0 !important; max-width: 100% !important; }
+  .print-area { display: block !important; background: #fff !important; padding: 0 !important; box-shadow: none !important; }
+  .page { display: none; }
+  .page.active { display: block; }
+  
+  /* High contrast for printing */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .doc-logo-container { border-bottom: 2px solid #000 !important; padding-bottom: 10px !important; margin-bottom: 20px !important; }
+  table { border-collapse: collapse !important; width: 100% !important; }
+  th { background: #f1f5f9 !important; color: #000 !important; border: 1px solid #cbd5e1 !important; }
+  td { border: 1px solid #e2e8f0 !important; color: #000 !important; }
+}
+
+/* ── DOCUMENT SPECIFIC CLASSES (Used in js previews) ── */
+.doc-logo-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+.doc-company-logo { max-height: 70px; object-fit: contain; }
+.doc-client-logo { max-height: 60px; object-fit: contain; opacity: 0.9; }
+
+/* ── THEME TRANSITION REFINEMENT ─────── */
+body, .sidebar, .topbar, .dash-card, .form-card, .btn, .nav-btn {
+  transition: 
+    background-color 0.4s var(--ease),
+    border-color 0.4s var(--ease),
+    color 0.4s var(--ease),
+    box-shadow 0.4s var(--ease),
+    transform 0.4s var(--ease),
+    backdrop-filter 0.4s var(--ease);
+}

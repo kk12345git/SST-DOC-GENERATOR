@@ -139,11 +139,16 @@ function updateToggleUI(theme) {
 //  AUTHENTICATION MOCK
 // ══════════════════════════════════════════════
 function checkAuth() {
-  const authScreen = document.getElementById('auth-screen');
+  const authScreen   = document.getElementById('auth-screen');
+  const appContainer = document.getElementById('app-container');
+
   if (isAuth) {
-    authScreen.style.display = 'none';
+    if (authScreen)   authScreen.style.display = 'none';
+    if (appContainer) appContainer.style.display = 'block';
+    showPage(currentPage);
   } else {
-    authScreen.style.display = 'flex';
+    if (authScreen)   authScreen.style.display = 'flex';
+    if (appContainer) appContainer.style.display = 'none';
   }
 }
 
@@ -178,13 +183,14 @@ function handleAuth(e) {
   const pass = document.getElementById('auth-pass').value;
 
   // 1. Check Hardcoded SST Credentials
-  if (user === 'SST' && pass === 'SST@123') {
+  const userLower = user.toLowerCase();
+  if (userLower === 'sst' && pass === 'SST@123') {
     loginSuccess("SST Super Sun Traders", "admin@sst.com");
     return;
   }
 
   // 2. Check Registered Users
-  const found = registeredUsers.find(u => u.username === user && u.password === pass);
+  const found = registeredUsers.find(u => u.username.toLowerCase() === userLower && u.password === pass);
   if (found) {
     loginSuccess(found.name, `${found.username}@sst.com`);
   } else {
@@ -198,7 +204,8 @@ function handleSignup(e) {
   const user = document.getElementById('reg-user').value;
   const pass = document.getElementById('reg-pass').value;
 
-  if (registeredUsers.some(u => u.username === user) || user === 'SST') {
+  const userLower = user.toLowerCase();
+  if (registeredUsers.some(u => u.username.toLowerCase() === userLower) || userLower === 'sst') {
     showToast("Username already exists!", "error");
     return;
   }
@@ -506,21 +513,21 @@ function addInvRow() {
   tr.id = 'inv-row-' + n;
   tr.innerHTML = `
     <td class="sno">${n}</td>
-    <td><input class="left" type="text" placeholder="Item description" oninput="calcInvTotals()"></td>
-    <td><input type="text" placeholder="HSN" style="width:90px"></td>
-    <td><input type="number" placeholder="0" min="0" step="1" style="width:70px" oninput="calcInvTotals()"></td>
-    <td><input type="text" placeholder="pcs" style="width:55px"></td>
-    <td><input type="number" placeholder="0.00" min="0" step="0.01" style="width:90px" oninput="calcInvTotals()"></td>
+    <td><input class="left inv-item-desc" type="text" placeholder="Item description" oninput="calcInvTotals()"></td>
+    <td><input class="inv-item-hsn" type="text" placeholder="HSN" style="width:90px"></td>
+    <td><input class="inv-item-qty" type="number" placeholder="0" min="0" step="1" style="width:70px" oninput="calcInvTotals()"></td>
+    <td><input class="inv-item-unit" type="text" placeholder="pcs" style="width:55px"></td>
+    <td><input class="inv-item-rate" type="number" placeholder="0.00" min="0" step="0.01" style="width:90px" oninput="calcInvTotals()"></td>
     <td class="gst-col">
-      <select style="padding:7px 6px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;" onchange="calcInvTotals()">
+      <select class="inv-item-gst-pct" style="padding:7px 6px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;" onchange="calcInvTotals()">
         <option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option><option value="0">0%</option>
       </select>
     </td>
     <td class="gst-col"><input type="text" placeholder="0.00" readonly style="background:#f9fafb;width:80px;font-family:'JetBrains Mono',monospace;font-size:12px;" id="inv-gstamt-${n}"></td>
     <td><input type="text" placeholder="0.00" readonly style="background:#f9fafb;width:90px;font-family:'JetBrains Mono',monospace;font-size:12px;" id="inv-amt-${n}"></td>
-    <td><input type="text" placeholder="Batch No." style="width:100px"></td>
-    <td><input type="text" placeholder="dd/mm/yy" style="width:80px"></td>
-    <td><input type="text" placeholder="dd/mm/yy" style="width:80px"></td>
+    <td><input class="inv-item-batch" type="text" placeholder="Batch No." style="width:100px"></td>
+    <td><input class="inv-item-mfg" type="text" placeholder="dd/mm/yy" style="width:80px"></td>
+    <td><input class="inv-item-expiry" type="text" placeholder="dd/mm/yy" style="width:80px"></td>
     <td><button class="del-row" onclick="delRow('inv-row-${n}','inv')">✕</button></td>
   `;
   tbody.appendChild(tr);
@@ -535,11 +542,11 @@ function addQuoRow() {
   tr.id = 'quo-row-' + n;
   tr.innerHTML = `
     <td class="sno">${n}</td>
-    <td><input class="left" type="text" placeholder="Item name / description" oninput="calcQuoTotals()"></td>
-    <td><input type="text" placeholder="Code" style="width:100px"></td>
-    <td><input type="number" placeholder="0.00" min="0" step="0.01" style="width:100px" oninput="calcQuoTotals()"></td>
+    <td><input class="left quo-item-name" type="text" placeholder="Item name / description" oninput="calcQuoTotals()"></td>
+    <td><input class="quo-item-code" type="text" placeholder="Code" style="width:100px"></td>
+    <td><input class="quo-item-price" type="number" placeholder="0.00" min="0" step="0.01" style="width:100px" oninput="calcQuoTotals()"></td>
     <td class="gst-col">
-      <select style="padding:7px 6px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;" onchange="calcQuoTotals()">
+      <select class="quo-item-gst-pct" style="padding:7px 6px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;" onchange="calcQuoTotals()">
         <option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option><option value="0">0%</option>
       </select>
     </td>
@@ -569,10 +576,9 @@ function calcInvTotals() {
   const rows = document.querySelectorAll('#inv-items-body tr');
   let sub = 0, totalGst = 0;
   rows.forEach(row => {
-    const inputs = row.querySelectorAll('input');
-    const qty    = parseFloat(inputs[2]?.value) || 0;
-    const rate   = parseFloat(inputs[4]?.value) || 0;
-    const gstPct = parseFloat(row.querySelector('select')?.value || 0);
+    const qty    = parseFloat(row.querySelector('.inv-item-qty')?.value) || 0;
+    const rate   = parseFloat(row.querySelector('.inv-item-rate')?.value) || 0;
+    const gstPct = parseFloat(row.querySelector('.inv-item-gst-pct')?.value || 0);
     const base   = qty * rate;
     const gstAmt = invGstEnabled ? (base * gstPct / 100) : 0;
     const total  = base + gstAmt;
@@ -599,9 +605,8 @@ function calcQuoTotals() {
   const rows = document.querySelectorAll('#quo-items-body tr');
   let subTotal = 0, totalGst = 0;
   rows.forEach(row => {
-    const inputs = row.querySelectorAll('input');
-    const price  = parseFloat(inputs[2]?.value) || 0;
-    const gstPct = parseFloat(row.querySelector('select')?.value || 0);
+    const price  = parseFloat(row.querySelector('.quo-item-price')?.value) || 0;
+    const gstPct = parseFloat(row.querySelector('.quo-item-gst-pct')?.value || 0);
     const gstAmt = quoGstEnabled ? (price * gstPct / 100) : 0;
     const total  = price + gstAmt;
     subTotal += price;
@@ -626,7 +631,8 @@ function calcQuoTotals() {
 // ══════════════════════════════════════════════
 
 function previewInvoice() {
-  const data = getInvoiceData();
+  try {
+    const data = getInvoiceData();
   const html = `
     <div style="font-family:'Inter',sans-serif;color:#1e293b;padding:5mm;">
       <div class="doc-logo-container">
@@ -701,14 +707,19 @@ function previewInvoice() {
       </div>
     </div>
   `;
-  document.getElementById('invoice-doc').innerHTML = html;
-  document.getElementById('invoice-form-section').style.display = 'none';
-  document.getElementById('invoice-print-area').style.display   = 'block';
-  window.scrollTo({top: 0, behavior: 'auto'});
+    document.getElementById('invoice-doc').innerHTML = html;
+    document.getElementById('invoice-form-section').style.display = 'none';
+    document.getElementById('invoice-print-area').style.display   = 'block';
+    window.scrollTo({top: 0, behavior: 'auto'});
+  } catch (err) {
+    console.error("Preview Invoice Error:", err);
+    showToast("Error generating preview. Please check form data.", "error");
+  }
 }
 
 function previewQuotation() {
-  const data = getQuotationData();
+  try {
+    const data = getQuotationData();
   const html = `
     <div style="font-family:'Inter',sans-serif;color:#1e293b;padding:5mm;">
       <div class="doc-logo-container">
@@ -783,24 +794,27 @@ function previewQuotation() {
       </div>
     </div>
   `;
-  document.getElementById('quotation-doc').innerHTML = html;
-  document.getElementById('quotation-form-section').style.display = 'none';
-  document.getElementById('quotation-print-area').style.display   = 'block';
-  window.scrollTo({top: 0, behavior: 'auto'});
+    document.getElementById('quotation-doc').innerHTML = html;
+    document.getElementById('quotation-form-section').style.display = 'none';
+    document.getElementById('quotation-print-area').style.display   = 'block';
+    window.scrollTo({top: 0, behavior: 'auto'});
+  } catch (err) {
+    console.error("Preview Quotation Error:", err);
+    showToast("Error generating preview. Please check form data.", "error");
+  }
 }
 
 function getInvoiceData() {
   const items = [];
   document.querySelectorAll('#inv-items-body tr').forEach(row => {
-    const inputs = row.querySelectorAll('input');
-    const desc = inputs[0]?.value;
+    const desc = row.querySelector('.inv-item-desc')?.value;
     if (!desc) return;
     items.push({
       desc:  desc,
-      hsn:   inputs[1]?.value || '',
-      qty:   parseFloat(inputs[2]?.value) || 0,
-      unit:  inputs[3]?.value || 'pcs',
-      rate:  parseFloat(inputs[4]?.value) || 0
+      hsn:   row.querySelector('.inv-item-hsn')?.value || '',
+      qty:   parseFloat(row.querySelector('.inv-item-qty')?.value) || 0,
+      unit:  row.querySelector('.inv-item-unit')?.value || 'pcs',
+      rate:  parseFloat(row.querySelector('.inv-item-rate')?.value) || 0
     });
   });
   const sub   = parseFloat(document.getElementById('inv-subtotal').textContent.replace('₹','')) || 0;
@@ -821,13 +835,12 @@ function getInvoiceData() {
 function getQuotationData() {
   const items = [];
   document.querySelectorAll('#quo-items-body tr').forEach(row => {
-    const inputs = row.querySelectorAll('input');
-    const name = inputs[0]?.value;
+    const name = row.querySelector('.quo-item-name')?.value;
     if (!name) return;
     items.push({
       name:  name,
-      code:  inputs[1]?.value || '-',
-      price: parseFloat(inputs[2]?.value) || 0
+      code:  row.querySelector('.quo-item-code')?.value || '-',
+      price: parseFloat(row.querySelector('.quo-item-price')?.value) || 0
     });
   });
   const sub   = parseFloat(document.getElementById('quo-subtotal').textContent.replace('₹','')) || 0;
